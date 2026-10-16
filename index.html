@@ -1,0 +1,1996 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>나만의 나전칠기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Song+Myung&family=Gowun+Dodum&family=Noto+Sans+KR:wght@900&display=swap">
+<style>
+/* Layout: one-screen lacquer table — title + four-step bar, the lacquer board as stage, one tool tray per step */
+:root{
+  --lacquer:#070707;
+  --lacquer-2:#161515;
+  --vermilion:#9a3324;
+  --pearl:#ece6dc;
+  --pearl-dim:#a8a197;
+  --line:rgba(236,230,220,.16);
+  --display:"Song Myung","Nanum Myeongjo","AppleMyungjo",serif;
+  --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:dark;
+}
+html{height:100%;box-sizing:border-box}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;background:var(--lacquer);color:var(--pearl);font-family:var(--body);overflow:hidden;-webkit-user-select:none;user-select:none}
+[hidden]{display:none!important}
+.app{height:100%;display:flex;flex-direction:column;gap:10px;padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1200px;margin:0 auto}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:10px 16px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;gap:3px;min-width:0}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(24px,4.4vw,34px);line-height:1;margin:0;letter-spacing:.04em;text-wrap:balance}
+h1 .seal{display:inline-grid;place-items:center;width:1.05em;height:1.05em;margin-left:.3em;font-size:.55em;vertical-align:.35em;background:var(--vermilion);color:var(--pearl);border-radius:3px;letter-spacing:0}
+.sub{font-size:12.5px;color:var(--pearl-dim);margin:0}
+.about{font:inherit;font-size:12px;color:var(--pearl);background:none;border:0;border-bottom:1px dotted var(--pearl-dim);padding:0;margin-left:6px;cursor:pointer}
+.steps{display:flex;border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;background:var(--lacquer-2);max-width:100%}
+.steps button{font:inherit;font-size:14px;color:var(--pearl-dim);background:none;border:0;border-radius:999px;padding:7px 13px;cursor:pointer;white-space:nowrap}
+.steps button[aria-current="step"]{background:var(--pearl);color:var(--lacquer)}
+.steps b{font-weight:400;font-size:11px;display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid currentColor;margin-right:4px;vertical-align:1px}
+.stage{position:relative;flex:1;min-height:0;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--lacquer)}
+canvas#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block;cursor:crosshair}
+.hint{transition:opacity .6s}
+.hint.dim{opacity:0}
+.hint{position:absolute;left:10px;top:10px;right:10px;width:fit-content;font-size:12.5px;line-height:1.4;color:var(--pearl);pointer-events:none;background:rgba(7,7,7,.66);padding:5px 10px;border-radius:12px}
+.toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:max-content;max-width:calc(100% - 24px);font-size:13px;line-height:1.45;background:rgba(236,230,220,.95);color:var(--lacquer);padding:8px 14px;border-radius:8px;pointer-events:none;text-align:center}
+.cam{position:absolute;right:10px;bottom:10px;width:min(30%,150px);aspect-ratio:4/3;max-width:100%;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:#000}
+.cam video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);opacity:.75}
+.cam span{position:absolute;left:6px;top:4px;font-size:11px;color:var(--pearl)}
+.tray{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;min-height:44px}
+.chip{display:none}
+.chip.always{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.chip[aria-expanded="true"]{border-color:var(--pearl);background:#2b2522}
+.group[data-always]:not(.open){display:none}
+.group[data-fold].open{display:flex;flex-wrap:wrap;position:fixed;z-index:20;background:var(--lacquer-2);border:1px solid var(--line);border-radius:12px;padding:12px;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.65);max-width:min(620px,calc(100vw - 32px))}
+.group[data-fold].open .label{width:100%;margin-top:2px}
+.zoomui{position:absolute;right:10px;top:10px;display:flex;align-items:center;gap:2px;background:rgba(7,7,7,.7);border:1px solid var(--line);border-radius:999px;padding:3px;z-index:4;font-size:12px;font-variant-numeric:tabular-nums}
+.zoomui button{font:inherit;color:var(--pearl);background:none;border:0;min-width:30px;height:28px;border-radius:999px;cursor:pointer;font-size:15px}
+.zoomui button:disabled{opacity:.35;cursor:default}
+.zoomui #zFit{font-size:12px;padding:0 8px}
+.zoomui span{min-width:40px;text-align:center;color:var(--pearl-dim);padding-left:6px}
+.txtin{font:inherit;font-size:14px;color:var(--pearl);background:var(--lacquer-2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:6.5em;min-height:38px}
+.lq i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:1px solid var(--line)}
+.seg2 .tbtn{min-width:44px}
+.loupe-note{display:none}
+.undo .ico{display:none}
+.subg{display:contents}
+.tools{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;flex:1;min-width:0}
+.group{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.label{font-size:11.5px;color:var(--pearl-dim);letter-spacing:.06em;margin-right:2px}
+.tbtn{font:inherit;font-size:13.5px;color:var(--pearl);background:var(--lacquer-2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;min-height:38px}
+.tbtn[aria-pressed="true"]{border-color:var(--pearl);background:#2b2522}
+.tbtn[data-kind="carve"]{color:#e3b878}
+.tbtn:disabled{opacity:.4;cursor:default}
+.cta{font:inherit;font-size:14.5px;background:var(--vermilion);color:var(--pearl);border:0;border-radius:8px;padding:9px 16px;cursor:pointer;min-height:40px;margin-left:auto}
+.swatch{width:34px;height:34px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;outline-offset:2px}
+.swatch[aria-pressed="true"]{border-color:var(--pearl);box-shadow:0 0 0 2px var(--lacquer) inset}
+.sw0{background:conic-gradient(from 30deg,#a9d8cf,#9db4d6,#c3b2de,#e0bfd4,#b5dccb,#a9d8cf)}
+.sw1{background:conic-gradient(from 30deg,#f3ece2,#e6d3d8,#d8e3ea,#f1e6cf,#f3ece2)}
+.sw2{background:conic-gradient(from 30deg,#d5e3bd,#b9dcc8,#ece0c0,#c4e0d6,#d5e3bd)}
+.sw3{background:conic-gradient(from 30deg,#e9cf9a,#d9a96a,#f1dcae,#c99a63,#e9cf9a)}
+.shellname{font-size:13px;min-width:3.5em}
+.dot{display:inline-block;border-radius:50%;background:var(--pearl);vertical-align:middle}
+.meter{display:flex;align-items:center;gap:8px;font-size:13px;font-variant-numeric:tabular-nums}
+.meter .bar{width:140px;max-width:40vw;height:8px;border-radius:999px;background:var(--lacquer-2);border:1px solid var(--line);overflow:hidden}
+.meter .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#9fd3cc,#c8b8e2,#ecd9b4);transition:width .3s}
+.name{display:flex;align-items:center;gap:6px}
+.name input{font:inherit;font-size:14px;color:var(--pearl);background:var(--lacquer-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:11em;min-height:38px}
+.name input:focus-visible,button:focus-visible{outline:2px solid var(--pearl);outline-offset:2px}
+@media (max-width:620px){
+  .cta{margin-left:0;width:100%}
+  .subtxt{display:none}.about{margin-left:0}
+  .steps{width:100%}.steps button{flex:1;padding:7px 4px;font-size:13px}
+  .tray{flex-direction:column;align-items:stretch;flex-wrap:nowrap;gap:8px}
+  .tools{width:100%;flex:none}
+  .tools{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:12px;padding-bottom:2px}
+  .tools::-webkit-scrollbar{display:none}
+  .tools .group{flex-wrap:nowrap;flex:none}
+  .tbtn,.label{white-space:nowrap}.tbtn{padding:7px 10px;font-size:13px}
+  .meter{flex:none}
+  .chip{display:inline-flex;align-items:center;gap:4px;flex:none;white-space:nowrap}
+  .group[data-fold]:not(.open){display:none}
+  .group[data-fold].open{left:max(16px,env(safe-area-inset-left,0px))!important;right:max(16px,env(safe-area-inset-right,0px));max-width:none}
+  .tools .group:not([data-fold]) > .label,.shellname,.name .label{display:none}
+  .name input{width:8.5em}
+  .swatch{width:28px;height:28px}
+  .tools,.tools .group{gap:6px}
+  .tbtn{padding:7px 9px}
+  .undo .txt{display:none}.undo .ico{display:inline;font-size:17px;line-height:1}.undo{min-width:40px}
+}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>나만의 나전칠기<span class="seal">螺</span></h1>
+      <p class="sub"><span class="subtxt">도안을 그리고, 자개를 붙이고, 옻칠을 갈아내 완성해요</span><button class="about" id="bAbout">나전칠기란?</button></p>
+    </div>
+    <nav class="steps" aria-label="만드는 순서">
+      <button data-step="1" aria-current="step"><b>1</b>도안</button>
+      <button data-step="2"><b>2</b>자개</button>
+      <button data-step="3"><b>3</b>옻칠·연마</button>
+      <button data-step="4"><b>4</b>완성</button>
+    </nav>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="hint" id="hint"></div>
+    <div class="cam" id="cam" hidden><video id="vid" playsinline muted></video><span id="camState">손 찾는 중…</span></div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="zoomui" id="zoomUi" hidden>
+      <span id="zPct">100%</span><button id="zFit">원래 크기</button>
+    </div>
+  </div>
+
+  <!-- 1 도안 -->
+  <div class="tray" id="tray1">
+    <div class="tools">
+    <div class="group" role="group" aria-label="펜" data-fold="펜">
+      <span class="label">펜</span>
+      <button class="tbtn" data-kind="cut" aria-pressed="true" title="둘러싼 칸이 자개 한 조각이 돼요">윤곽선</button>
+      <button class="tbtn" data-kind="carve" aria-pressed="false" title="칸을 나누지 않고 자개 위에 칼선으로 새겨져요">새김선</button>
+      <button class="tbtn" id="bErase" aria-pressed="false">지우개</button>
+      <span class="label">굵기</span>
+      <button class="tbtn" data-pen="0" aria-pressed="true">가늘게</button>
+      <button class="tbtn" data-pen="1" aria-pressed="false">굵게</button>
+    </div>
+    <div class="group" role="group" aria-label="모양" data-fold="모양">
+      <span class="label">모양</span>
+      <button class="tbtn" data-shape="free" aria-pressed="true">자유선</button>
+      <button class="tbtn" data-shape="line" aria-pressed="false">직선</button>
+      <button class="tbtn" data-shape="circle" aria-pressed="false">원</button>
+      <button class="tbtn" data-shape="rect" aria-pressed="false">네모</button>
+      <button class="tbtn" data-shape="leaf" aria-pressed="false">잎</button>
+      <button class="tbtn" data-shape="petal" aria-pressed="false">꽃잎</button>
+      <button class="tbtn" data-shape="star" aria-pressed="false">별</button>
+    </div>
+    <div class="group" role="group" aria-label="장식" data-fold="장식" data-always="1">
+      <span class="label">장식</span>
+      <button class="tbtn" data-stamp="corner" aria-pressed="false">모서리 넝쿨</button>
+      <button class="tbtn" data-stamp="flower" aria-pressed="false">꽃</button>
+      <button class="tbtn" data-stamp="mountain" aria-pressed="false">산</button>
+      <button class="tbtn" data-stamp="plum" aria-pressed="false">매화</button>
+      <button class="tbtn" data-stamp="chrys" aria-pressed="false">국화</button>
+      <button class="tbtn" data-stamp="butterfly" aria-pressed="false">나비</button>
+      <button class="tbtn" data-stamp="cloud" aria-pressed="false">구름</button>
+      <button class="tbtn" data-stamp="wave" aria-pressed="false">물결</button>
+      <button class="tbtn" data-stamp="hex" aria-pressed="false">귀갑문</button>
+      <button class="tbtn" data-stamp="frame" aria-pressed="false">테두리</button>
+      <span class="label">글자</span>
+      <input id="stampText" class="txtin" maxlength="8" placeholder="넣을 글자" value="福">
+      <button class="tbtn" data-stamp="text" aria-pressed="false">글자 붙이기</button>
+    </div>
+    <div class="group" role="group" aria-label="편집" data-fold="편집" data-nostate="1" data-always="1">
+      <span class="label">편집</span>
+      <button class="tbtn" id="bSelect" aria-pressed="false">선택·옮기기</button>
+      <button class="tbtn" id="bDup" disabled>복제</button>
+      <button class="tbtn" id="bDelSel" disabled>고른 것 지우기</button>
+      <button class="tbtn" id="bMirror" aria-pressed="false">좌우 대칭</button>
+      <button class="tbtn" id="bClear">모두 지우기</button>
+      <button class="tbtn" id="bSample">예시 도안</button>
+      <span class="label">밑그림 사진</span>
+      <button class="tbtn" id="bPhoto">사진 깔기</button>
+      <button class="tbtn" id="bPhotoOff" hidden>사진 치우기</button>
+      <input type="file" id="photoIn" accept="image/*" hidden>
+      <span class="label">옻칠 바탕</span>
+      <button class="tbtn lq" data-lacq="black" aria-pressed="true"><i style="background:#141414"></i>흑칠</button>
+      <button class="tbtn lq" data-lacq="red" aria-pressed="false"><i style="background:#5e1d14"></i>주칠</button>
+      <button class="tbtn lq" data-lacq="brown" aria-pressed="false"><i style="background:#3d2616"></i>갈색칠</button>
+    </div>
+    <div class="group">
+      <button class="tbtn undo" id="bUndo1" aria-label="되돌리기"><span class="ico" aria-hidden="true">↶</span><span class="txt">되돌리기</span></button>
+    </div>
+    </div>
+    <button class="cta" id="go2">자개 붙이러 가기</button>
+  </div>
+
+  <!-- 2 자개 붙이기 -->
+  <div class="tray" id="tray2" hidden>
+    <div class="tools">
+    <div class="group" role="group" aria-label="자개 종류">
+      <span class="label">자개</span>
+      <button class="swatch sw0" data-type="0" aria-pressed="true" aria-label="전복패" title="전복패"></button>
+      <button class="swatch sw1" data-type="1" aria-pressed="false" aria-label="진주패" title="진주패"></button>
+      <button class="swatch sw2" data-type="2" aria-pressed="false" aria-label="야광패" title="야광패"></button>
+      <button class="swatch sw3" data-type="3" aria-pressed="false" aria-label="황패" title="황패"></button>
+      <span class="shellname" id="shellName">전복패</span>
+    </div>
+    <div class="group seg2" role="group" aria-label="붙일 곳">
+      <span class="label">붙일 곳</span>
+      <button class="tbtn" data-tool="fill" aria-pressed="true">칸</button>
+      <button class="tbtn" data-tool="line" aria-pressed="false">선</button>
+    </div>
+    <div class="group" role="group" aria-label="붓" data-fold="붓">
+      <span class="label">붓</span>
+      <button class="tbtn" data-tool="feather" aria-pressed="false">깃털</button>
+      <button class="tbtn" data-tool="scale" aria-pressed="false">비늘</button>
+      <button class="tbtn" data-tool="needle" aria-pressed="false">솔잎</button>
+      <button class="tbtn" data-tool="strip" aria-pressed="false">끊음질</button>
+      <span class="subg" id="sizeGroup" hidden>
+        <span class="label">크기</span>
+        <button class="tbtn" data-size="0" aria-pressed="false" aria-label="작게"><span class="dot" style="width:5px;height:5px"></span></button>
+        <button class="tbtn" data-size="1" aria-pressed="true" aria-label="보통"><span class="dot" style="width:10px;height:10px"></span></button>
+        <button class="tbtn" data-size="2" aria-pressed="false" aria-label="크게"><span class="dot" style="width:16px;height:16px"></span></button>
+      </span>
+      <span class="label">한 번에</span>
+      <button class="tbtn" id="bAuto">빈 칸 모두 채우기</button>
+    </div>
+    <div class="group">
+      <button class="tbtn undo" id="bUndo2" aria-label="되돌리기"><span class="ico" aria-hidden="true">↶</span><span class="txt">되돌리기</span></button>
+    </div>
+    </div>
+    <button class="cta" id="go3">옻칠하고 갈아내기</button>
+  </div>
+
+  <!-- 3 옻칠·연마 -->
+  <div class="tray" id="tray3" hidden>
+    <div class="tools">
+    <div class="meter"><span class="label">연마</span><span class="bar"><i id="meterFill"></i></span><span id="meterTxt">0%</span></div>
+    <div class="group">
+      <button class="tbtn bCam">카메라로 갈아내기</button>
+      <button class="tbtn" id="bPolishAll">한 번에 갈아내기</button>
+    </div>
+    </div>
+  </div>
+
+  <!-- 4 완성 -->
+  <div class="tray" id="tray4" hidden>
+    <div class="tools">
+    <div class="group">
+      <label class="name" for="workName"><span class="label">작품 이름</span><input id="workName" maxlength="14" value="나의 첫 나전칠기" placeholder="작품 이름"></label>
+      <button class="tbtn" id="bSave">작품 저장</button>
+    </div>
+    <div class="group" data-fold="더보기" data-nostate="1">
+      <button class="tbtn bCam">카메라로 만지기</button>
+      <button class="tbtn bTilt">기울여 보기</button>
+    </div>
+    </div>
+    <button class="cta" id="bNew">새 작품 만들기</button>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const $$ = q => document.querySelectorAll(q);
+const stage = $('stage'), cv = $('cv');
+let ctx = cv.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const INK = ['#b9d8d6', '#eeeae6', '#d6e2c4', '#e6c894'];
+const INK_RGB = INK.map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
+const SHELL_NAME = ['전복패', '진주패', '야광패', '황패'];
+const SIZES = [0.012, 0.026, 0.05];
+
+let W = 0, H = 0, M = 0, DPR = 1, ASPECT = 0, BW = 0, BH = 0;
+let step = 1;
+let doan = [], deco = [], fills = [], hist = [];
+let penKind = 'cut', shape = 'free';
+// 도형: 시작점 a에서 끝점 b까지 끌어서 만든 점 목록(모서리가 둥글게 뭉개지지 않도록 촘촘하게)
+function shapePts(kind, a, b) {
+  const [x0, y0] = a, [x1, y1] = b, P = [];
+  const seg = (p, q, n) => { for (let i = 0; i < n; i++) P.push([p[0] + (q[0] - p[0]) * i / n, p[1] + (q[1] - p[1]) * i / n]); };
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = Math.abs(x1 - x0) / 2, ry = Math.abs(y1 - y0) / 2;
+  const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+  if (kind === 'line') { seg(a, b, 24); P.push(b); }
+  else if (kind === 'circle') { for (let i = 0; i <= 72; i++) { const t = i / 72 * 6.2832; P.push([cx + Math.cos(t) * rx, cy + Math.sin(t) * ry]); } }
+  else if (kind === 'rect') { const c = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]; for (let k = 0; k < 4; k++) seg(c[k], c[(k + 1) % 4], 16); P.push([x0, y0]); }
+  else if (kind === 'leaf' || kind === 'petal') {
+    // 잎: 양 끝이 뾰족한 렌즈 / 꽃잎: 끝이 둥글고 밑이 뾰족한 물방울
+    const wd = len * (kind === 'leaf' ? .3 : .38), side = [];
+    for (let i = 0; i <= 36; i++) {
+      const t = i / 36, w = kind === 'leaf' ? Math.sin(Math.PI * t) * wd : Math.sqrt(Math.sin(Math.PI * Math.min(1, t * .88 + .02))) * Math.pow(t, .6) * wd * 1.1;
+      side.push([t, w]);
+    }
+    side.forEach(([t, w]) => P.push([x0 + dx * t - uy * w, y0 + dy * t + ux * w]));
+    for (let i = side.length - 2; i >= 0; i--) { const [t, w] = side[i]; P.push([x0 + dx * t + uy * w, y0 + dy * t - ux * w]); }
+  }
+  else if (kind === 'star') { for (let i = 0; i <= 10; i++) { const t = -Math.PI / 2 + i / 10 * 6.2832, r = i % 2 ? .45 : 1, p = [cx + Math.cos(t) * rx * r, cy + Math.sin(t) * ry * r]; if (i) seg(P.pop(), p, 8); P.push(p); } }
+  return P.map(p => toN(...p));
+}
+let live = null, mirror = false, erasing = false, penSize = 0, groupId = 1, seedN = 1000;
+let curType = 0, tool = 'fill', decoSize = 1;
+let DPR_CAP = 2, PIX_BUDGET = 200000, perf = { n: 0, sum: 0, last: 0 };
+let REG = null, NB = null, introT = -10, seed = Math.random() * 100, inlayCount = 0;
+let bg = null, dirty = true;
+const pointers = new Map(), ripples = [], sparks = [], glints = [], ambient = { next: 0, last: 0 };
+let hands = [];
+const polish = { idx: null, progress: 0, done: false, fade: 1, fadeT: 0, last: 0 };
+
+const toN = (x, y) => [(x - W / 2) / M, (y - H / 2) / M];
+const toP = (nx, ny) => [W / 2 + nx * M, H / 2 + ny * M];
+const STABILIZE = .15;   // 도안 손떨림 보정 세기
+const penW = s => s.erase ? Math.max(8, M * .035) : s.kind === 'carve' ? Math.max(.9, M * (s.lw ? .0035 : .0017)) : Math.max(1.6, M * (s.lw ? .011 : .0055));
+const CARVE_COL = '#e3b878';
+
+/* ---------- 공통 ---------- */
+function hash(x, y) { const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return h - Math.floor(h); }
+function noise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+function fbm(x, y) { return noise(x, y) * .55 + noise(x * 2.1 + 17, y * 2.1) * .3 + noise(x * 4.3, y * 4.3 + 9) * .15; }
+const POOL = {};
+function canvasFor(name, w, h, opts) {
+  let c = POOL[name];
+  if (!c) { c = POOL[name] = document.createElement('canvas'); c._opts = opts; }
+  w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  const x = c.getContext('2d', c._opts);
+  if (!x) throw new Error('캔버스를 만들 수 없어요(메모리 부족)');
+  x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; x.filter = 'none';
+  x.clearRect(0, 0, w, h);
+  return c;
+}
+const c2d = name => POOL[name].getContext('2d', POOL[name]._opts);
+let toastTimer;
+function toast(msg, ms = 3500) {
+  const el = $('toast'); el.textContent = msg; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, ms);
+}
+let shownErr = false;
+function reportError(e) { console.error(e); if (shownErr) return; shownErr = true; toast('오류: ' + (e && e.message ? e.message : e), 8000); }
+
+/* ---------- 옻칠 바탕 ---------- */
+function buildLacquer() {
+  bg = canvasFor('bg', W * DPR, H * DPR);
+  const g = bg.getContext('2d');
+  g.scale(DPR, DPR);
+  const rg = g.createRadialGradient(W * .45, H * .4, 0, W * .5, H * .5, Math.hypot(W, H) * .6);
+  const LC = LACQ[lacq]; rg.addColorStop(0, LC[0]); rg.addColorStop(.55, LC[1]); rg.addColorStop(1, LC[2]);
+  g.fillStyle = rg; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 260; i++) {
+    const y = Math.random() * H, x = Math.random() * W, len = 40 + Math.random() * 220;
+    g.strokeStyle = `rgba(255,255,255,${0.006 + Math.random() * 0.012})`;
+    g.lineWidth = 0.5 + Math.random() * 1.5;
+    g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + len / 2, y + (Math.random() - .5) * 6, x + len, y + (Math.random() - .5) * 4); g.stroke();
+  }
+  for (let i = 0, n = W * H / 260; i < n; i++) {
+    g.fillStyle = `hsla(${150 + Math.random() * 150},40%,80%,${.05 + Math.random() * .18})`;
+    g.fillRect(Math.random() * W, Math.random() * H, .7 + Math.random() * .8, .7 + Math.random() * .8);
+  }
+}
+
+/* ---------- 선 ---------- */
+function pathLine(c, pts, lw, color, erase) {
+  c.save();
+  c.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
+  c.strokeStyle = c.fillStyle = erase ? '#000' : color;
+  c.lineWidth = lw; c.lineCap = 'round'; c.lineJoin = 'round';
+  const p0 = toP(...pts[0]);
+  if (pts.length === 1) { c.beginPath(); c.arc(p0[0], p0[1], lw / 2, 0, Math.PI * 2); c.fill(); }
+  else {
+    c.beginPath(); c.moveTo(p0[0], p0[1]);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const a = toP(...pts[i]), b = toP(...pts[i + 1]);
+      c.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+    }
+    const l = toP(...pts[pts.length - 1]); c.lineTo(l[0], l[1]); c.stroke();
+  }
+  c.restore();
+}
+
+/* ---------- 장식 붓: 자개 조각 모양 ---------- */
+function rng(sd) { let s = (sd * 2654435761) >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function resample(P, sp) {
+  if (P.length === 1) return [{ x: P[0][0], y: P[0][1], a: -Math.PI / 2, sa: -Math.PI / 2 }];
+  const out = [];
+  let acc = sp;
+  for (let i = 1; i < P.length; i++) {
+    const [x0, y0] = P[i - 1], [x1, y1] = P[i], L = Math.hypot(x1 - x0, y1 - y0);
+    if (!L) continue;
+    const a = Math.atan2(y1 - y0, x1 - x0);
+    let d = Math.max(0, sp - acc);
+    while (d <= L) { out.push({ x: x0 + (x1 - x0) * d / L, y: y0 + (y1 - y0) * d / L, a }); d += sp; }
+    acc = L - (d - sp);
+  }
+  if (!out.length) out.push({ x: P[0][0], y: P[0][1], a: Math.atan2(P[P.length - 1][1] - P[0][1], P[P.length - 1][0] - P[0][0]) });
+  for (let i = 0; i < out.length; i++) {
+    const a0 = out[Math.max(0, i - 1)].a, a1 = out[Math.min(out.length - 1, i + 1)].a;
+    out[i].sa = Math.atan2(Math.sin(a0) + Math.sin(out[i].a) + Math.sin(a1), Math.cos(a0) + Math.cos(out[i].a) + Math.cos(a1));
+  }
+  return out;
+}
+function geom(s) {
+  const key = W + ',' + H;
+  if (s._g && s._gk === key) return s._g;
+  const r = rng(s.seed || 7), P = s.pts.map(p => toP(...p)), pieces = [];
+  const brush = s.brush;
+  if (brush === 'feather') {
+    const w = SIZES[s.size] * M * 1.5;
+    resample(P, w * .4).forEach((p, i) => {
+      const side = i % 2 ? 1 : -1, a = p.sa + side * (.22 + r() * .32);
+      const L = w * (1.8 + r() * .9), wd = w * (.3 + r() * .14);
+      const bx = p.x - Math.cos(a) * L * .2, by = p.y - Math.sin(a) * L * .2;
+      const ca = Math.cos(a), sa = Math.sin(a), left = [], right = [];
+      for (let k = 0; k <= 10; k++) {
+        const u = k / 10, hw = wd * Math.sin(Math.PI * Math.pow(u, .65)) * (1 - .3 * u);
+        const cx = bx + ca * L * u, cy = by + sa * L * u;
+        left.push([cx - sa * hw, cy + ca * hw]); right.push([cx + sa * hw, cy - ca * hw]);
+      }
+      pieces.push({ pts: left.concat(right.reverse()), warm: r() < .14, off: r(), ax: [bx, by, bx + ca * L, by + sa * L] });
+    });
+  } else if (brush === 'needle') {
+    const w = SIZES[s.size] * M * 1.7, lw = Math.max(.9, M * .0019);
+    resample(P, w * 1.05).forEach(p => {
+      const a0 = p.sa - Math.PI / 2, n = 23;
+      for (let k = 0; k < n; k++) {
+        const u = k / (n - 1) - .5, ang = a0 + u * 2.6 + (r() - .5) * .07;
+        const len = w * (1.5 + r() * .5) * (1 - .35 * Math.abs(u) * 2) * (k % 2 ? .78 : 1);
+        const x0 = p.x + Math.cos(ang) * w * .08, y0 = p.y + Math.sin(ang) * w * .08;
+        pieces.push({ line: [x0, y0, p.x + Math.cos(ang) * len, p.y + Math.sin(ang) * len], lw, off: r(), warm: false });
+      }
+      pieces.push({ dot: [p.x, p.y, lw * 2.6], off: r(), warm: false });
+    });
+  } else if (brush === 'scale') {
+    const w = SIZES[s.size] * M * 1.3;
+    resample(P, w * .48).forEach((p, i) => {
+      for (const row of [-1, 0, 1]) {
+        const a = p.sa + (r() - .5) * .25, ca = Math.cos(a), sa = Math.sin(a);
+        const perp = row * w * .42 + (i % 2 ? w * .2 : 0);
+        const cx = p.x - Math.sin(p.sa) * perp, cy = p.y + Math.cos(p.sa) * perp;
+        const L = w * (.42 + r() * .1), wd = w * (.3 + r() * .06), pts = [];
+        for (let k = 0; k < 18; k++) { const t = k / 18 * 6.283, ex = Math.cos(t) * L, ey = Math.sin(t) * wd * (Math.cos(t) > 0 ? 1 : .85); pts.push([cx + ex * ca - ey * sa, cy + ex * sa + ey * ca]); }
+        pieces.push({ pts, warm: r() < .18, off: r(), ax: [cx - ca * L, cy - sa * L, cx + ca * L, cy + sa * L] });
+      }
+    });
+  } else { // 끊음질
+    const w = s.penOf ? penW(s.penOf) * 1.9 : SIZES[s.size] * M, gap = Math.max(1.3, M * .0022);
+    if (P.length === 1) pieces.push({ dot: [P[0][0], P[0][1], w / 2], off: r(), warm: false });
+    else {
+      let cur = [], len = 0, target = w * (1.8 + r() * 1.4), skip = 0;
+      for (const p of resample(P, 1.5)) {
+        if (skip > 0) { skip -= 1.5; continue; }
+        cur.push([p.x, p.y]); len += 1.5;
+        if (len >= target) {
+          if (cur.length > 1) pieces.push({ poly: cur, lw: w, off: r(), warm: false });
+          cur = []; len = 0; target = w * (1.8 + r() * 1.4); skip = gap;
+        }
+      }
+      if (cur.length > 1) pieces.push({ poly: cur, lw: w, off: r(), warm: false });
+    }
+  }
+  pieces.forEach(pc => {
+    if (pc.line) pc.ax = pc.line;
+    else if (pc.poly) pc.ax = [...pc.poly[0], ...pc.poly[pc.poly.length - 1]];
+    else if (pc.dot) pc.ax = [pc.dot[0], pc.dot[1] - pc.dot[2], pc.dot[0], pc.dot[1] + pc.dot[2]];
+  });
+  s._g = { pieces }; s._gk = key;
+  return s._g;
+}
+function drawStroke(c, s, style, cut) {
+  for (const pc of geom(s).pieces) {
+    c.globalCompositeOperation = 'source-over';
+    const st = style(c, pc);
+    c.beginPath();
+    if (pc.pts) {
+      pc.pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
+      c.closePath(); c.fillStyle = st; c.fill();
+      if (cut) { c.globalCompositeOperation = 'destination-out'; c.lineWidth = cut; c.strokeStyle = '#000'; c.lineJoin = 'round'; c.stroke(); }
+    } else if (pc.line) {
+      c.moveTo(pc.line[0], pc.line[1]); c.lineTo(pc.line[2], pc.line[3]);
+      c.lineWidth = pc.lw; c.lineCap = 'round'; c.strokeStyle = st; c.stroke();
+    } else if (pc.poly) {
+      pc.poly.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
+      c.lineWidth = pc.lw; c.lineCap = 'butt'; c.lineJoin = 'round'; c.strokeStyle = st; c.stroke();
+    } else if (pc.dot) {
+      c.arc(pc.dot[0], pc.dot[1], pc.dot[2], 0, Math.PI * 2); c.fillStyle = st; c.fill();
+    }
+  }
+  c.globalCompositeOperation = 'source-over';
+}
+const inkStyle = s => (c, pc) => INK[pc.warm ? 3 : s.type];
+const attrStyle = s => (c, pc) => {
+  const R = (pc.off * 255) | 0, B = (pc.warm ? 3 : s.type) * 60;
+  const g = c.createLinearGradient(pc.ax[0], pc.ax[1], pc.ax[2], pc.ax[3]);
+  g.addColorStop(0, `rgb(${R},0,${B})`); g.addColorStop(1, `rgb(${R},255,${B})`);
+  return g;
+};
+const cutW = () => Math.max(.8, M * .0016);
+// 도안 선 중 끊음질로 입힌 선
+const inlayStrokes = () => doan.filter(s => !s.erase && s.inlay != null).map(s => {
+  if (!s._ps) s._ps = { brush: 'strip', pts: s.pts, seed: s.seed, penOf: s };
+  s._ps.type = s.inlay; if (s._ps.pts !== s.pts) { s._ps.pts = s.pts; s._ps._g = null; }
+  return s._ps;
+});
+
+/* ---------- 도안의 칸 나누기 ---------- */
+function computeRegions() {
+  pickRid = -1;
+  const N = W * H;
+  const bc = canvasFor('bound', W, H, { willReadFrequently: true }), bx = c2d('bound');
+  for (const s of doan) if (s.kind !== 'carve') pathLine(bx, s.pts, penW(s), '#fff', s.erase);
+  const bd = bx.getImageData(0, 0, W, H).data;
+  const raw = new Uint8Array(N), isLine = new Uint8Array(N);
+  for (let i = 0; i < N; i++) raw[i] = bd[i * 4 + 3] > 80 ? 1 : 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {  // 1px 넓혀 틈 막기
+    const i = y * W + x;
+    isLine[i] = raw[i] || (x > 0 && raw[i - 1]) || (x < W - 1 && raw[i + 1]) || (y > 0 && raw[i - W]) || (y < H - 1 && raw[i + W]) ? 1 : 0;
+  }
+  // 틈 메우기: 칸을 찾을 때만 선을 GAP만큼 두껍게 본다(선 사이 틈이 약 2×GAP까지 닫힘)
+  const GAP = Math.max(3, Math.round(M * .014));
+  const blk = new Uint8Array(N), tmp = new Uint8Array(N), pre = new Int32Array(Math.max(W, H) + 1);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) pre[x + 1] = pre[x] + raw[y * W + x];
+    for (let x = 0; x < W; x++) tmp[y * W + x] = pre[Math.min(W, x + GAP + 1)] - pre[Math.max(0, x - GAP)] > 0 ? 1 : 0;
+  }
+  for (let x = 0; x < W; x++) {
+    for (let y = 0; y < H; y++) pre[y + 1] = pre[y] + tmp[y * W + x];
+    for (let y = 0; y < H; y++) blk[y * W + x] = pre[Math.min(H, y + GAP + 1)] - pre[Math.max(0, y - GAP)] > 0 ? 1 : 0;
+  }
+  const Q = new Int32Array(N);
+  let qh = 0, qt = 0;
+  // 칸 찾기(벽 지도 wall 위에서): 바깥 -2, 닫힌 칸 0,1,2…
+  const label = wall => {
+    const L = new Int32Array(N).fill(-1);
+    const flood = v => {
+      while (qh < qt) {
+        const i = Q[qh++], x = i % W;
+        if (x > 0 && !wall[i - 1] && L[i - 1] === -1) { L[i - 1] = v; Q[qt++] = i - 1; }
+        if (x < W - 1 && !wall[i + 1] && L[i + 1] === -1) { L[i + 1] = v; Q[qt++] = i + 1; }
+        if (i >= W && !wall[i - W] && L[i - W] === -1) { L[i - W] = v; Q[qt++] = i - W; }
+        if (i < N - W && !wall[i + W] && L[i + W] === -1) { L[i + W] = v; Q[qt++] = i + W; }
+      }
+    };
+    qh = qt = 0;
+    const seedOut = i => { if (!wall[i] && L[i] === -1) { L[i] = -2; Q[qt++] = i; } };
+    for (let x = 0; x < W; x++) { seedOut(x); seedOut((H - 1) * W + x); }
+    for (let y = 0; y < H; y++) { seedOut(y * W); seedOut(y * W + W - 1); }
+    flood(-2);
+    let id = 0;
+    for (let i = 0; i < N; i++) if (!wall[i] && L[i] === -1) { qh = qt = 0; L[i] = id; Q[qt++] = i; flood(id); id++; }
+    return L;
+  };
+  const lab1 = label(isLine);   // 그린 그대로
+  const lab2 = label(blk);      // 틈 메운 상태
+  // 틈 메운 칸을 원래 선까지 되돌려 키운다
+  qh = qt = 0;
+  for (let i = 0; i < N; i++) if (lab2[i] !== -1 && !blk[i]) Q[qt++] = i;
+  while (qh < qt) {
+    const i = Q[qh++], x = i % W, v = lab2[i];
+    for (const j of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, i - W, i + W]) {
+      if (j < 0 || j >= N || isLine[j] || lab2[j] !== -1) continue;
+      lab2[j] = v; Q[qt++] = j;
+    }
+  }
+  // 원래 닫힌 칸은 그대로, 바깥으로 새던 곳만 틈 메운 결과를 쓴다
+  const lab = new Int32Array(N).fill(-1), key = new Map(), cnt = [], sx = [], sy = [];
+  for (let i = 0; i < N; i++) {
+    if (isLine[i]) continue;
+    let k;
+    if (lab1[i] >= 0) k = lab1[i] * 2;
+    else if (lab2[i] >= 0) k = lab2[i] * 2 + 1;
+    else { lab[i] = -2; continue; }
+    let id = key.get(k);
+    if (id === undefined) { id = cnt.length; key.set(k, id); cnt.push(0); sx.push(0); sy.push(0); }
+    lab[i] = id; cnt[id]++; sx[id] += i % W; sy[id] += (i / W) | 0;
+  }
+  const minA = Math.max(14, (M * .012) ** 2), remap = new Int32Array(cnt.length).fill(-3), regions = [];
+  cnt.forEach((c, id) => {
+    if (c < minA) return;
+    remap[id] = regions.length;
+    const ang = Math.random() * Math.PI;
+    regions.push({ area: c, off: Math.random(), ca: Math.cos(ang), sa: Math.sin(ang), p0: 1e9, p1: -1e9, rep: -1, mx: sx[id] / c, my: sy[id] / c, bd: 1e18 });
+  });
+  for (let i = 0; i < N; i++) {
+    if (lab[i] < 0) continue;
+    const r = remap[lab[i]];
+    if (r < 0) { lab[i] = -3; isLine[i] = 1; continue; }
+    lab[i] = r;
+    const R = regions[r], x = i % W, y = (i / W) | 0, pr = x * R.ca + y * R.sa;
+    if (pr < R.p0) R.p0 = pr; if (pr > R.p1) R.p1 = pr;
+    const d = (x - R.mx) ** 2 + (y - R.my) ** 2; if (d < R.bd) { R.bd = d; R.rep = i; }
+  }
+  // 선 안쪽 깊이(가운데 능선 찾기용)
+  const dt = new Uint16Array(N).fill(65535);
+  qh = qt = 0;
+  for (let i = 0; i < N; i++) if (!isLine[i] || lab[i] === -3) { dt[i] = 0; Q[qt++] = i; }
+  while (qh < qt) {
+    const i = Q[qh++], x = i % W, nd = dt[i] + 1;
+    if (x > 0 && dt[i - 1] > nd) { dt[i - 1] = nd; Q[qt++] = i - 1; }
+    if (x < W - 1 && dt[i + 1] > nd) { dt[i + 1] = nd; Q[qt++] = i + 1; }
+    if (i >= W && dt[i - W] > nd) { dt[i - W] = nd; Q[qt++] = i - W; }
+    if (i < N - W && dt[i + W] > nd) { dt[i + W] = nd; Q[qt++] = i + W; }
+  }
+  REG = { N, isLine, lab, regions, dt, Q };
+}
+const regionAt = (nx, ny) => {
+  const [x, y] = toP(nx, ny), xi = x | 0, yi = y | 0;
+  if (!REG || xi < 0 || yi < 0 || xi >= W || yi >= H) return -1;
+  const r = REG.lab[yi * W + xi];
+  if (r >= 0) return r;
+  // 화면 크기가 바뀌어 점이 선 위로 밀렸으면 가까운 칸을 찾는다
+  for (let rad = 1; rad <= 4; rad++) for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
+    const x2 = xi + dx, y2 = yi + dy;
+    if (x2 < 0 || y2 < 0 || x2 >= W || y2 >= H) continue;
+    const v = REG.lab[y2 * W + x2]; if (v >= 0) return v;
+  }
+  return -1;
+};
+
+/* ---------- 자개 붙인 판 합성 ---------- */
+// attr(논리 해상도): R=조각 색 위상, G=결 방향 위치, B=자개 종류 / prev: 붙이기 단계 미리보기 / maskHi: 선명한 가장자리
+function compose() {
+  if (!REG) computeRegions();
+  const { N, isLine, lab, regions, dt, Q } = REG;
+  const ft = new Int8Array(regions.length).fill(-1);
+  // 비워 둘 표시(구멍)를 먼저, 자개를 나중에 적용해서 작은 구멍 표시가 획을 지우지 않게
+  for (const f of fills) if (f.type < 0) { const [x, y] = toP(f.nx, f.ny), xi = x | 0, yi = y | 0; const r = xi >= 0 && yi >= 0 && xi < W && yi < H ? REG.lab[yi * W + xi] : -1; if (r >= 0) ft[r] = -1; }
+  for (const f of fills) if (f.type >= 0) { const r = regionAt(f.nx, f.ny); if (r >= 0) ft[r] = f.type; }
+  const filled = i => lab[i] >= 0 && ft[lab[i]] >= 0;
+  const Dmax = Math.ceil(M * .011) + 3;
+  // 채운 칸이 둘레 선 위로 자라 선을 덮는다
+  const own = new Int32Array(N).fill(-1), dd = new Uint8Array(N);
+  let qh = 0, qt = 0;
+  for (let i = 0; i < N; i++) if (filled(i)) { own[i] = lab[i]; Q[qt++] = i; }
+  while (qh < qt) {
+    const i = Q[qh++]; if (dd[i] >= Dmax) continue;
+    const x = i % W;
+    for (const j of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, i - W, i + W]) {
+      if (j < 0 || j >= N || !isLine[j] || own[j] !== -1) continue;
+      own[j] = own[i]; dd[j] = dd[i] + 1; Q[qt++] = j;
+    }
+  }
+  // 빈 곳과 맞닿은 선에는 틈을 넣지 않는다
+  const near = new Uint8Array(N), nd = new Uint8Array(N);
+  qh = qt = 0;
+  for (let i = 0; i < N; i++) if (!isLine[i] && !filled(i)) { near[i] = 1; Q[qt++] = i; }
+  while (qh < qt) {
+    const i = Q[qh++]; if (nd[i] > Dmax) continue;
+    const x = i % W;
+    for (const j of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, i - W, i + W]) {
+      if (j < 0 || j >= N || near[j] || !isLine[j]) continue;
+      near[j] = 1; nd[j] = nd[i] + 1; Q[qt++] = j;
+    }
+  }
+  const seam = new Uint8Array(N);
+  for (let i = 0; i < N; i++) {
+    if (lab[i] >= 0 || own[i] < 0) continue;
+    const x = i % W, d0 = dt[i];
+    const ridge = d0 >= 1 && (x === 0 || dt[i - 1] <= d0) && (x === W - 1 || dt[i + 1] <= d0) && (i < W || dt[i - W] <= d0) && (i >= N - W || dt[i + W] <= d0);
+    const meet = (x > 0 && own[i - 1] >= 0 && own[i - 1] !== own[i]) || (i >= W && own[i - W] >= 0 && own[i - W] !== own[i]);
+    if ((ridge && !near[i]) || meet) { seam[i] = 1; if (x > 0 && lab[i - 1] < 0) seam[i - 1] = 1; if (i >= W && lab[i - W] < 0) seam[i - W] = 1; }
+  }
+  const A = new ImageData(W, H), ad = A.data, Pv = new ImageData(W, H), pd = Pv.data;
+  let cnt = 0;
+  for (let i = 0; i < N; i++) {
+    const r = lab[i] >= 0 ? (ft[lab[i]] >= 0 ? lab[i] : -1) : own[i];
+    if (r < 0 || seam[i]) continue;
+    const R = regions[r], t = ft[r], x = i % W, y = (i / W) | 0, o = i * 4;
+    const gp = Math.max(0, Math.min(1, ((x * R.ca + y * R.sa) - R.p0) / (R.p1 - R.p0 + 1)));
+    ad[o] = R.off * 255; ad[o + 1] = gp * 255; ad[o + 2] = t * 60; ad[o + 3] = 255;
+    const k = .84 + .16 * Math.sin(gp * Math.PI * 3 + R.off * 6), rgb = INK_RGB[t];
+    pd[o] = rgb[0] * k; pd[o + 1] = rgb[1] * k; pd[o + 2] = rgb[2] * k; pd[o + 3] = 255;
+    cnt++;
+  }
+  const extra = [...inlayStrokes(), ...deco];
+  inlayCount = cnt + extra.length;
+  const pb = canvasFor('prevBase', W, H); pb.getContext('2d').putImageData(Pv, 0, 0);
+  const at = canvasFor('attr', W, H, { willReadFrequently: true }), ac = c2d('attr');
+  ac.putImageData(A, 0, 0);
+  for (const s of extra) drawStroke(ac, s, attrStyle(s), cutW());
+  const pv = canvasFor('prev', W * DPR, H * DPR), pc = pv.getContext('2d');
+  pc.imageSmoothingEnabled = true; pc.filter = `blur(${.6 * DPR}px)`; pc.drawImage(pb, 0, 0, W * DPR, H * DPR); pc.filter = 'none';
+  pc.setTransform(DPR, 0, 0, DPR, 0, 0);
+  for (const s of extra) drawStroke(pc, s, inkStyle(s), cutW());
+  const mh = canvasFor('maskHi', W * DPR, H * DPR), mc = mh.getContext('2d');
+  mc.imageSmoothingEnabled = true; mc.filter = `blur(${.6 * DPR}px)`; mc.drawImage(pb, 0, 0, W * DPR, H * DPR); mc.filter = 'none';   // 계단 없이 매끈한 가장자리
+  mc.setTransform(DPR, 0, 0, DPR, 0, 0);
+  for (const s of extra) drawStroke(mc, s, () => '#fff', cutW());
+  // 새김선: 칸은 나누지 않고 자개 위에 가는 칼선으로 파낸다(옻칠이 비쳐 검게 보임)
+  if (doan.some(s => s.kind === 'carve' && !s.erase)) {
+    const ck = canvasFor('carve', W * DPR, H * DPR), cc = ck.getContext('2d');
+    cc.setTransform(DPR, 0, 0, DPR, 0, 0);
+    for (const s of doan) if (s.kind === 'carve' || s.erase) pathLine(cc, s.pts, penW(s), '#fff', s.erase);
+    for (const t of [mc, pc]) { t.setTransform(1, 0, 0, 1, 0, 0); t.globalCompositeOperation = 'destination-out'; t.drawImage(ck, 0, 0); t.globalCompositeOperation = 'source-over'; }
+  }
+  if (step >= 2) buildNacre();   // 붙이는 순간부터 자개빛으로
+  dirty = true;
+}
+
+/* ---------- 자개빛 계산 준비 ---------- */
+const NAC = [
+  // o0+or: 진주층이 만드는 광로차(nm) 범위, k: 무지개빛 세기, tint: 껍데기 바탕색
+  { h0: 165, hr: 120, s: 30, l: 70, band: 9, lr: 3, lc: 4, o0: 900, or: 950, k: 1, tint: [.97, 1.01, 1.03] },     // 전복패
+  { h0: 200, hr: 200, s: 16, l: 80, band: 6, lr: 2, lc: 3, o0: 1250, or: 900, k: .7, tint: [1.02, 1, 1.01] },    // 진주패
+  { h0: 110, hr: 90, s: 22, l: 75, band: 7, lr: 2, lc: 3, o0: 950, or: 750, k: .85, tint: [.95, 1.04, .94] },    // 야광패
+  { h0: 30, hr: 18, s: 46, l: 66, band: 7, lr: 2, lc: 3, o0: 1000, or: 600, k: .6, tint: [1.08, .95, .76] },      // 황패
+];
+// 진주층 간섭색이 도는 순서(분홍 → 연보라 → 하늘 → 청록 → 연두빛 은색 → 크림)
+const NAC_STOPS = [[236, 204, 220], [206, 196, 236], [176, 202, 234], [166, 216, 214], [204, 226, 206], [238, 224, 200]];
+const NAC_LUT = (() => {
+  const n = 256, L = new Float32Array(n * 3), mean = [0, 0, 0];
+  NAC_STOPS.forEach(c => c.forEach((v, i) => mean[i] += v / NAC_STOPS.length / 255));
+  for (let i = 0; i < n; i++) {
+    const f = i / n * NAC_STOPS.length, k = Math.floor(f), u = f - k, a = NAC_STOPS[k], b = NAC_STOPS[(k + 1) % NAC_STOPS.length], e = u * u * (3 - 2 * u);
+    for (let c = 0; c < 3; c++) L[i * 3 + c] = (a[c] + (b[c] - a[c]) * e) / 255 - mean[c];
+  }
+  return L;
+})();
+function nacHue(type, ph) { const P = NAC[type]; return P.h0 + P.hr * (.5 + .5 * Math.sin(ph * 6.283)); }
+function buildNacre() {
+  const f = Math.min(1, Math.sqrt(PIX_BUDGET / (W * H)));
+  const lw = Math.max(1, Math.round(W * f)), lh = Math.max(1, Math.round(H * f));
+  const adata = c2d('attr').getImageData(0, 0, W, H).data;
+  const maskHi = POOL.maskHi;
+  const C = M / 8, gw = Math.ceil(W / C) + 1, gh = Math.ceil(H / C) + 1, pieces = [];
+  for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++)
+    pieces.push({ x: (gx + .5) * C, y: (gy + .5) * C, nrm: Math.random() * 6.283, tilt: 0, tv: 0, facet: 0 });
+  const src = new Int32Array(lw * lh).fill(-1);
+  for (let j = 0; j < lh; j++) for (let i = 0; i < lw; i++) {
+    const x = Math.min(W - 1, ((i + .5) / f) | 0), y = Math.min(H - 1, ((j + .5) / f) | 0), o = (y * W + x) * 4;
+    if (adata[o + 3] > 90) src[j * lw + i] = o;
+  }
+  for (let pass = 0; pass < 2; pass++) {
+    const copy = src.slice();
+    for (let j = 0; j < lh; j++) for (let i = 0; i < lw; i++) {
+      const k = j * lw + i; if (copy[k] >= 0) continue;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
+        const ii = i + di, jj = j + dj;
+        if (ii >= 0 && jj >= 0 && ii < lw && jj < lh && copy[jj * lw + ii] >= 0) { src[k] = copy[jj * lw + ii]; break; }
+      }
+    }
+  }
+  let n = 0; for (let k = 0; k < src.length; k++) if (src[k] >= 0) n++;
+  const px = new Float32Array(n), py = new Float32Array(n), hb = new Float32Array(n), lb = new Float32Array(n), sb = new Float32Array(n);
+  const pw = new Int32Array(n * 4), pwt = new Float32Array(n * 4), ptype = new Uint8Array(n), pos = new Int32Array(n), sh = new Float32Array(n);
+  const od = new Float32Array(n), nx = new Float32Array(n), ny = new Float32Array(n), ik = new Float32Array(n);
+  const s1 = seed;
+  let q = 0;
+  for (let j = 0; j < lh; j++) for (let i = 0; i < lw; i++) {
+    const k = j * lw + i, o = src[k]; if (o < 0) continue;
+    const ty = Math.min(3, Math.round(adata[o + 2] / 60)), P = NAC[ty];
+    const off = adata[o] / 255, gp = adata[o + 1] / 255;
+    const x = (i + .5) / f, y = (j + .5) / f, u = x / M, v = y / M;
+    const flow = fbm(u * 1.5 + s1, v * 1.5 + s1), warp = fbm(u * 5 + 7 + s1, v * 5) * 4;
+    const bandv = Math.sin(gp * Math.PI * 2.4 + warp + off * 6);
+    const fine = Math.sin(gp * 34 + warp * 3);
+    hb[q] = flow * 1.3 + off * .6 + bandv * .1 + fbm(u * 6 + 11, v * 6 + s1) * .5;   // 구름처럼 얼룩진 색
+    lb[q] = P.l + P.band * bandv * .45 + P.lr * fine + (fbm(u * 2 + 80, v * 2 + s1) - .5) * 20 + (fbm(u * 7 + 40, v * 7 + s1) - .5) * 14 + (off - .5) * 8;
+    sh[q] = Math.max(0, fbm(u * 3.2 + 90 + s1, v * 3.2) - .52) * 2.4;   // 하얀 광택 얼룩
+    sb[q] = P.s * (.6 + .65 * fbm(u * 2.6 + 30, v * 2.6 + s1));
+    od[q] = P.o0 + P.or * Math.min(1, Math.max(0, hb[q] / 2.4)) + gp * 420 + (fbm(u * 4.5 + 3, v * 4.5 + s1) - .5) * 460 + fine * 18;   // 진주층 두께 → 광로차(한 조각 안에서도 무지개 띠가 생기게)
+    const e = .015, nb = fbm(u * 3 + 50, v * 3 + s1);                            // 층의 미세한 기울기(결)
+    nx[q] = (fbm(u * 3 + 50 + e, v * 3 + s1) - nb) / e * .14 + Math.sin(gp * 38 + warp) * .03;
+    ny[q] = (fbm(u * 3 + 50, v * 3 + s1 + e) - nb) / e * .14 + (off - .5) * .2;
+    ik[q] = P.k * Math.min(1.3, sb[q] / P.s);
+    const gx = x / C - .5, gy = y / C - .5, ix = Math.max(0, Math.min(gw - 2, Math.floor(gx))), iy = Math.max(0, Math.min(gh - 2, Math.floor(gy)));
+    const fx = Math.max(0, Math.min(1, gx - ix)), fy = Math.max(0, Math.min(1, gy - iy));
+    pw[q * 4] = iy * gw + ix; pw[q * 4 + 1] = iy * gw + ix + 1; pw[q * 4 + 2] = (iy + 1) * gw + ix; pw[q * 4 + 3] = (iy + 1) * gw + ix + 1;
+    pwt[q * 4] = (1 - fx) * (1 - fy); pwt[q * 4 + 1] = fx * (1 - fy); pwt[q * 4 + 2] = (1 - fx) * fy; pwt[q * 4 + 3] = fx * fy;
+    px[q] = x; py[q] = y; ptype[q] = ty; pos[q] = k * 4; q++;
+  }
+  const rim = canvasFor('rim', W * DPR, H * DPR), rc = rim.getContext('2d');
+  rc.filter = `blur(${2 * DPR}px)`; rc.globalAlpha = .9; rc.drawImage(maskHi, 0, 1.5 * DPR);
+  rc.filter = 'none'; rc.globalAlpha = 1; rc.globalCompositeOperation = 'source-in'; rc.fillStyle = '#000'; rc.fillRect(0, 0, rim.width, rim.height);
+  const field = canvasFor('field', lw, lh), fctx = field.getContext('2d');
+  const layer = canvasFor('layer', W * DPR, H * DPR);
+  // 작품이 차지한 범위(기물에 담을 때 크기 맞춤용)
+  let bx0 = W, by0 = H, bx1 = 0, by1 = 0;
+  for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) if (adata[(y * W + x) * 4 + 3] > 90) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
+  const pad = M * .03, bounds = bx1 > bx0 ? [Math.max(0, bx0 - pad), Math.max(0, by0 - pad), Math.min(W, bx1 + pad), Math.min(H, by1 + pad)] : [0, 0, W, H];
+  const bgrim = canvasFor('bgrim', W * DPR, H * DPR), bc = bgrim.getContext('2d');
+  bc.drawImage(bg, 0, 0); bc.drawImage(rim, 0, 0);
+  NB = { bgrim, bounds, n, px, py, hb, lb, sb, sh, od, nx, ny, ik, pw, pwt, ptype, pos, pieces, C, maskHi, rim, field, fctx, img: fctx.createImageData(lw, lh), layer, lctx: layer.getContext('2d') };
+}
+
+/* ---------- 옻칠 덮개와 연마 ---------- */
+function initCover(keepOld) {
+  let old = null;
+  if (keepOld && POOL.cover) { old = canvasFor('coverTmp', POOL.cover.width, POOL.cover.height); old.getContext('2d').drawImage(POOL.cover, 0, 0); }
+  const cvr = canvasFor('cover', W, H, { willReadFrequently: true }), c = c2d('cover');
+  if (old) { c.drawImage(old, 0, 0, W, H); }
+  else {
+    const g = c.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#24170f'); g.addColorStop(.5, '#1a100b'); g.addColorStop(1, '#22150e');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    for (let i = 0; i < 420; i++) {   // 옻칠 붓결
+      const y = Math.random() * H, x = Math.random() * W - 40, len = 60 + Math.random() * 260;
+      c.strokeStyle = `rgba(${120 + Math.random() * 60},${70 + Math.random() * 30},40,${.04 + Math.random() * .06})`;
+      c.lineWidth = .6 + Math.random() * 2.4;
+      c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + len / 2, y + (Math.random() - .5) * 5, x + len, y + (Math.random() - .5) * 3); c.stroke();
+    }
+    c.globalAlpha = .13; c.drawImage(POOL.maskHi, 0, 0, W, H);   // 덮인 자개가 살짝 도드라져 보이게
+    c.globalAlpha = 1;
+  }
+  const adata = c2d('attr').getImageData(0, 0, W, H).data, idx = [];
+  for (let i = 0; i < W * H; i += 3) if (adata[i * 4 + 3] > 90) idx.push(i);
+  polish.idx = Int32Array.from(idx);
+  if (!old) { polish.progress = 0; polish.done = false; polish.fade = 1; }
+  updateMeter();
+}
+function rub(x0, y0, x1, y1) {
+  if (polish.done) return;
+  const c = c2d('cover'), r = M * .07, d = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, Math.ceil(d / (r * .3)));
+  c.globalCompositeOperation = 'destination-out';
+  for (let k = 0; k <= n; k++) {
+    const x = x0 + (x1 - x0) * k / n, y = y0 + (y1 - y0) * k / n;
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(0,0,0,.32)'); g.addColorStop(.6, 'rgba(0,0,0,.14)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  c.globalCompositeOperation = 'source-over';
+  if (Math.random() < .35) burst(x1, y1, 1);
+}
+function checkPolish(t) {
+  if (polish.done || t - polish.last < .3 || !polish.idx || !polish.idx.length) return;
+  polish.last = t;
+  const cd = c2d('cover').getImageData(0, 0, W, H).data;
+  let rev = 0; const idx = polish.idx;
+  for (let k = 0; k < idx.length; k++) if (cd[idx[k] * 4 + 3] < 70) rev++;
+  polish.progress = rev / idx.length;
+  updateMeter();
+  if (polish.progress >= .9) finishPolish();
+}
+function updateMeter() {
+  const p = Math.round(polish.progress * 100);
+  $('meterFill').style.width = p + '%'; $('meterTxt').textContent = p + '%';
+  if (step === 3) $('hint').textContent = `옻칠을 덮었어요 · 문질러 갈아내면 자개가 드러나요 (${p}%)`;
+}
+function finishPolish() {
+  if (polish.done) return;
+  polish.done = true; polish.fadeT = performance.now() / 1000; polish.progress = 1; updateMeter();
+  ripples.push({ x: W / 2, y: H / 2, t: polish.fadeT });
+  toast('연마 완료! 옻칠 속에서 자개가 빛나요.');
+}
+
+/* ---------- 크기 ---------- */
+function resize() {
+  const r = stage.getBoundingClientRect();
+  const nd = Math.min(window.devicePixelRatio || 1, DPR_CAP), nw = Math.max(1, Math.round(r.width)), nh = Math.max(1, Math.round(r.height));
+  if (nw === W && nh === H && nd === DPR) return;
+  DPR = nd; W = nw; H = nh;
+  // 판 비율은 처음 크기로 고정: 도구 줄 높이가 바뀌어도 그림이 같은 비율로만 커지고 줄어든다
+  if (!ASPECT) ASPECT = W / H;
+  BH = Math.min(H, W / ASPECT); BW = BH * ASPECT; M = Math.min(BW, BH);
+  try {
+    cv.width = W * DPR; cv.height = H * DPR;
+    buildLacquer(); renderDoan();
+    if (step >= 2) { computeRegions(); compose(); }
+    if (step >= 3) { buildNacre(); if (step === 3) initCover(true); }
+  } catch (e) { reportError(e); }
+  applyZoom();
+  dirty = true;
+}
+let rzT = 0;
+new ResizeObserver(() => { clearTimeout(rzT); rzT = setTimeout(resize, W > 1 ? 150 : 0); }).observe(stage);
+
+/* ---------- 도안 그리기 ---------- */
+function renderDoan() {
+  const dk = canvasFor('doanInk', W * DPR, H * DPR), c = dk.getContext('2d');
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const col = '#e8e1d4';
+  const colOf = s => s.kind === 'carve' ? CARVE_COL : col;
+  for (const s of doan) pathLine(c, s.pts, penW(s), colOf(s), s.erase);
+  if (liveStamp) for (const s of liveStamp) pathLine(c, s.pts, penW(s), colOf(s), false);
+  if (live && step === 1) {
+    pathLine(c, live.pts, penW(live), colOf(live), live.erase);
+    if (mirror) pathLine(c, live.pts.map(([x, y]) => [-x, y]), penW(live), colOf(live), live.erase);
+  }
+  dirty = true;
+}
+// 선 끝 자석: 끝이 시작점 근처면 닫고, 다른 선 근처면 그 선에 잇는다
+function snapEnds(s) {
+  const R = Math.max(14, M * .05), P = s.pts.map(p => toP(...p));
+  let len = 0; for (let i = 1; i < P.length; i++) len += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
+  const a = P[0], z = P[P.length - 1];
+  if (Math.hypot(a[0] - z[0], a[1] - z[1]) < R && len > R * 3) { s.pts.push(s.pts[0]); return; }
+  const nearest = pt => {
+    let best = R, bp = null;
+    for (const o of doan) {
+      if (o.erase) continue;
+      for (const q of o.pts) { const [x, y] = toP(...q), d = Math.hypot(x - pt[0], y - pt[1]); if (d < best) { best = d; bp = q; } }
+    }
+    return bp;
+  };
+  const e = nearest(z); if (e) s.pts.push(e);
+  const b = nearest(a); if (b) s.pts.unshift(b);
+}
+function doanChanged() { REG = null; NB = null; hist = []; updateButtons(); }
+
+/* ---------- 장식 붙이기: 모서리 넝쿨 · 꽃 · 산 · 테두리 ---------- */
+const STAMP_SIZE = { corner: .36, flower: .1, mountain: .34, plum: .07, chrys: .13, butterfly: .12, cloud: .09, wave: .1, hex: .1, text: .26 };
+const STAMP_DRAG = { corner: 1.15, flower: 1, mountain: 1.6, plum: .9, chrys: 1, butterfly: 1, cloud: .9, wave: .55, hex: .55, text: 1 };
+const STAMP_TIP = {
+  plum: '매화 · 누른 자리에 매화가 붙어요. 끌면 크기가 바뀌어요',
+  chrys: '국화 · 누른 자리에 국화가 붙어요. 끌면 크기가 바뀌어요',
+  butterfly: '나비 · 누른 자리에 나비가 붙어요. 선택·옮기기로 돌려서 방향을 바꿀 수 있어요',
+  cloud: '구름 · 말린 구름무늬가 붙어요. 끌면 크기가 바뀌어요',
+  wave: '물결 · 반원이 겹친 물결무늬가 붙어요. 끌면 크기가 바뀌어요',
+  hex: '귀갑문 · 거북 등 같은 육각 무늬가 붙어요. 끌면 크기가 바뀌어요',
+  text: '글자 · 칸에 쓴 글자가 자개로 붙어요. 누른 자리가 글자 가운데이고, 끌면 크기가 바뀌어요',
+  corner: '모서리 넝쿨 · 판을 누르면 그 자리가 넝쿨의 모서리가 돼요. 끌면 크기가 바뀌어요',
+  flower: '꽃 · 누른 자리에 꽃이 붙어요. 끌면 크기가 바뀌어요',
+  mountain: '산 · 누른 자리가 산의 밑동 가운데가 돼요. 끌면 크기가 바뀌어요',
+  frame: '테두리 · 판 아무 곳이나 누르면 가장자리에 테두리 띠가 둘러져요',
+};
+function stampParts(kind, ax, ay, S, fx, fy) {
+  const out = [], add = (pts, k = 'cut') => out.push({ pts, kind: k });
+  const T = ([u, v]) => [ax + u * S * fx, ay + v * S * fy];
+  const bez = (a, b, c, t) => [(1 - t) ** 2 * a[0] + 2 * (1 - t) * t * b[0] + t * t * c[0], (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * b[1] + t * t * c[1]];
+  const curve = (a, b, c, n = 24) => Array.from({ length: n + 1 }, (_, i) => bez(a, b, c, i / n));
+  const ring = (cx, cy, r, n = 28) => Array.from({ length: n + 1 }, (_, i) => [cx + Math.cos(i / n * 6.2832) * r, cy + Math.sin(i / n * 6.2832) * r]);
+  const spiral = (cx, cy, r0, turns, a0, dir, n = 40) => Array.from({ length: n + 1 }, (_, i) => { const k = i / n, a = a0 + dir * k * turns * 6.2832, r = r0 * (1 - .8 * k); return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; });
+  const lens = (a, b, wd, n = 14) => {   // 양끝이 뾰족한 잎·꽃잎
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, P = [], Q = [];
+    for (let i = 0; i <= n; i++) { const t = i / n, w = Math.sin(Math.PI * t) * wd * (1 - .15 * t), cx = a[0] + dx * t, cy = a[1] + dy * t; P.push([cx - uy * w, cy + ux * w]); Q.push([cx + uy * w, cy - ux * w]); }
+    return P.concat(Q.reverse().slice(1));
+  };
+  const band = (C, w0, w1) => {   // 가운데 선을 따라 굵기가 줄어드는 띠(닫힌 윤곽)
+    const L = [], R = [], n = C.length - 1;
+    for (let i = 0; i <= n; i++) {
+      const p = C[i], q = C[Math.min(n, i + 1)], o = C[Math.max(0, i - 1)], dx = q[0] - o[0], dy = q[1] - o[1], d = Math.hypot(dx, dy) || 1, w = w0 + (w1 - w0) * i / n;
+      L.push([p[0] - dy / d * w, p[1] + dx / d * w]); R.push([p[0] + dy / d * w, p[1] - dx / d * w]);
+    }
+    return L.concat(R.reverse(), [L[0]]);
+  };
+  const map = P => P.map(T);
+  if (kind === 'corner') {
+    const sw = ([u, v]) => [v, u];
+    const arm = curve([.17, .07], [.5, -.02], [.82, .07]).concat(spiral(.84, .16, .09, 1.1, -Math.PI / 2, 1).slice(1));
+    const inner = curve([.22, .22], [.5, .25], [.46, .46]).concat(spiral(.4, .46, .06, 1.1, 0, 1).slice(1));
+    for (const C of [arm, arm.map(sw)]) add(map(band(C, .026, .009)));
+    add(map(band(inner, .022, .008)));
+    // 잎: 넝쿨에 매달린 잎과 잎맥
+    const leafOn = (C, t, dir) => {
+      const i = Math.round(t * 24), p = C[i], q = C[i + 1], dx = q[0] - p[0], dy = q[1] - p[1], d = Math.hypot(dx, dy) || 1;
+      const nx = -dy / d * dir, ny = dx / d * dir, tip = [p[0] + nx * .13 + dx / d * .05, p[1] + ny * .13 + dy / d * .05];
+      add(map(lens(p, tip, .035))); add(map([p, [p[0] + (tip[0] - p[0]) * .85, p[1] + (tip[1] - p[1]) * .85]]), 'carve');
+    };
+    for (const C of [arm, arm.map(sw)]) { leafOn(C, .38, 1); leafOn(C, .7, 1); leafOn(C, .55, -1); }
+    // 모서리 꽃
+    for (let k = 0; k < 8; k++) { const a = k / 8 * 6.2832 + .2; add(map(lens([.14 + Math.cos(a) * .03, .14 + Math.sin(a) * .03], [.14 + Math.cos(a) * .135, .14 + Math.sin(a) * .135], .034))); }
+    add(map(ring(.14, .14, .035))); add(map(ring(.14, .14, .014, 16)), 'carve');
+    // 열매·꽃봉오리
+    for (const [u, v, r] of [[.62, .2, .018], [.2, .62, .018], [.56, .33, .014], [.33, .56, .014], [.3, .3, .02]]) add(map(ring(u, v, r, 18)));
+  } else if (kind === 'flower') {
+    for (let k = 0; k < 8; k++) { const a = k / 8 * 6.2832 - Math.PI / 2; add(map(lens([Math.cos(a) * .2, Math.sin(a) * .2], [Math.cos(a), Math.sin(a)], .2))); }
+    add(map(ring(0, 0, .24))); add(map(ring(0, 0, .09, 16)), 'carve');
+  } else if (kind === 'mountain') {
+    const peak = (cx, w, h, closed) => {
+      const P = [];
+      for (let i = 0; i <= 30; i++) { const t = i / 15 - 1; P.push([cx + t * w / 2, -h * (1 - Math.pow(Math.abs(t), 1.5))]); }
+      if (closed) P.push(P[0]);
+      return P;
+    };
+    for (const [cx, w, h] of [[-.12, .9, .62], [.3, .72, .46]]) {
+      add(map(peak(cx, w, h, true)));
+      add(map(peak(cx, w * .72, h * .72, false)));
+      add(map(peak(cx, w * .44, h * .44, false)));
+    }
+    add(map([[-.62, 0], [.7, 0]]));
+  } else if (kind === 'plum') {   // 매화: 둥근 꽃잎 다섯 장과 꽃술
+    for (let k = 0; k < 5; k++) { const a = k / 5 * 6.2832 - Math.PI / 2; add(map(ring(Math.cos(a) * .52, Math.sin(a) * .52, .42, 30))); }
+    add(map(ring(0, 0, .26, 22)));
+    for (let k = 0; k < 10; k++) { const a = k / 10 * 6.2832; add(map([[Math.cos(a) * .08, Math.sin(a) * .08], [Math.cos(a) * .2, Math.sin(a) * .2]]), 'carve'); }
+  } else if (kind === 'chrys') {   // 국화: 가는 꽃잎 두 겹
+    for (let k = 0; k < 12; k++) { const a = k / 12 * 6.2832; add(map(lens([Math.cos(a) * .22, Math.sin(a) * .22], [Math.cos(a), Math.sin(a)], .15, 12))); }
+    add(map(ring(0, 0, .2, 24))); add(map(ring(0, 0, .1, 16)), 'carve');
+  } else if (kind === 'butterfly') {   // 나비
+    for (const sx of [-1, 1]) {
+      const m2 = P => map(P.map(([u, v]) => [u * sx, v]));
+      add(m2(lens([-.04, -.08], [-.95, -.72], .36, 16)));
+      add(m2(lens([-.04, .06], [-.62, .62], .26, 14)));
+      add(m2(lens([-.2, -.2], [-.72, -.55], .12, 10)), 'carve');
+      add(m2(lens([-.16, .14], [-.46, .44], .08, 8)), 'carve');
+      add(m2(curve([-.02, -.42], [-.1, -.7], [-.26, -.82], 14)), 'carve');
+    }
+    add(map(lens([0, -.42], [0, .5], .07, 12)));
+  } else if (kind === 'cloud') {   // 구름(운문): 둥근 덩이 + 말린 새김 + 꼬리
+    for (const [u, v, r] of [[-.42, .05, .3], [0, -.12, .38], [.42, .06, .28]]) { add(map(ring(u, v, r, 28))); add(map(spiral(u, v, r * .7, 1.05, Math.PI / 2, -1, 30)), 'carve'); }
+    add(map(band(curve([.6, .2], [.95, .38], [1.25, .1], 24), .06, .015)));
+  } else if (kind === 'wave') {   // 물결(청해파): 겹친 반원 무늬
+    for (let r = 0; r < 3; r++) for (let c = -2; c <= 2; c++) {
+      const cx = c * .9 + (r % 2 ? .45 : 0), cy = r * .38;
+      if (Math.abs(cx) > 2) continue;
+      for (const rr of [.45, .3, .15]) add(map(Array.from({ length: 25 }, (_, i) => { const a = Math.PI + i / 24 * Math.PI; return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]; }).concat([[cx - rr, cy]])), rr === .45 ? 'cut' : 'carve');
+      add(map([[cx - .45, cy], [cx + .45, cy]]));
+    }
+  } else if (kind === 'hex') {   // 귀갑문: 거북 등 육각 무늬
+    const hexAt = (cx, cy, r) => Array.from({ length: 7 }, (_, i) => { const a = i / 6 * 6.2832 + Math.PI / 6; return [cx + Math.cos(a) * r, cy + Math.sin(a) * r]; });
+    const s = .42;
+    for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) {
+      if (Math.abs(q + r) > 2) continue;
+      const cx = s * Math.sqrt(3) * (q + r / 2), cy = s * 1.5 * r;
+      add(map(hexAt(cx, cy, s))); add(map(hexAt(cx, cy, s * .55)), 'carve');
+    }
+  } else if (kind === 'frame') {
+    const L0 = (W - BW) / 2, T0 = (H - BH) / 2;
+    const rect = (m) => { const P = [], c = [[L0 + m, T0 + m], [L0 + BW - m, T0 + m], [L0 + BW - m, T0 + BH - m], [L0 + m, T0 + BH - m]]; for (let k = 0; k < 4; k++) for (let i = 0; i < 16; i++) P.push([c[k][0] + (c[(k + 1) % 4][0] - c[k][0]) * i / 16, c[k][1] + (c[(k + 1) % 4][1] - c[k][1]) * i / 16]); P.push([L0 + m, T0 + m]); return P; };
+    const m1 = Math.max(10, M * .035);
+    add(rect(m1)); add(rect(m1 + Math.max(7, M * .02)));
+  }
+  return out;
+}
+function stampStrokes(kind, ax, ay, S) {
+  if (kind === 'text') return textStamp(($('stampText').value || '').trim() || '福', ax, ay, S);
+  const fx = ax > W / 2 ? -1 : 1, fy = ay > H / 2 ? -1 : 1;   // 모서리 넝쿨은 판 가운데를 향하게
+  return stampParts(kind, ax, ay, S, kind === 'corner' ? fx : 1, kind === 'corner' ? fy : 1)
+    .map(p => ({ pts: p.pts.map(q => toN(...q)), lw: 0, kind: p.kind, erase: false, seed: seedN++, inlay: null }));
+}
+
+/* ---------- 선택해서 옮기기·크기 바꾸기 ---------- */
+let tool1 = 'draw', stampKind = null, liveStamp = null, sel = null, drag1 = null, hist1 = [];
+const snap1 = () => { hist1.push({ doan: doan.map(s => ({ ...s, pts: s.pts.slice() })), fills: fills.map(f => ({ ...f })), deco: deco.map(s => ({ ...s, pts: s.pts.slice(), _g: null })) }); if (hist1.length > 60) hist1.shift(); };
+function groupBox(g) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const s of doan) if (s.g === g && !s.erase) for (const p of s.pts) { const [x, y] = toP(...p); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  return x1 < x0 ? null : [x0 - 8, y0 - 8, x1 + 8, y1 + 8];
+}
+function pickGroup(x, y) {
+  let best = Math.max(14, M * .03) / zoomView.z, g = null;
+  for (const s of doan) {
+    if (s.erase) continue;
+    for (let i = 0; i < s.pts.length; i++) {
+      const a = toP(...s.pts[i]), b = toP(...s.pts[Math.min(s.pts.length - 1, i + 1)]);
+      const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy;
+      const t = L2 ? Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2)) : 0;
+      const d = Math.hypot(x - a[0] - dx * t, y - a[1] - dy * t);
+      if (d < best) { best = d; g = s.g; }
+    }
+  }
+  return g;
+}
+// 고른 모양 안에 붙여 둔 칸 자개·장식 붓도 함께 옮긴다
+function withExtras(d) {
+  const b = groupBox(sel); if (!b) return d;
+  const inB = (x, y) => x > b[0] && x < b[2] && y > b[1] && y < b[3];
+  d.fl = fills.filter(f => inB(...toP(f.nx, f.ny))).map(f => [f, f.nx, f.ny]);
+  d.dc = deco.filter(s => inB(...toP(...s.pts[0]))).map(s => [s, s.pts.slice()]);
+  return d;
+}
+function selectDown(x, y) {
+  const b = sel != null ? groupBox(sel) : null, hs = Math.max(16, M * .03) / zoomView.z;
+  const orig = g => doan.filter(s => s.g === g).map(s => [s, s.pts.slice()]);
+  if (b) {
+    const [hx, hy] = rotHandle(b);
+    if (Math.hypot(x - hx, y - hy) < hs) {
+      const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
+      drag1 = withExtras({ mode: 'rotate', cx, cy, a0: Math.atan2(y - cy, x - cx), orig: orig(sel), moved: false }); return;
+    }
+    const corners = [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]];
+    if (corners.some(([cx, cy]) => Math.hypot(x - cx, y - cy) < hs)) {
+      const cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
+      drag1 = withExtras({ mode: 'scale', cx, cy, d0: Math.max(4, Math.hypot(x - cx, y - cy)), orig: orig(sel), moved: false }); return;
+    }
+    if (x > b[0] && x < b[2] && y > b[1] && y < b[3]) { drag1 = withExtras({ mode: 'move', x0: x, y0: y, orig: orig(sel), moved: false }); return; }
+  }
+  sel = pickGroup(x, y);
+  if (sel != null) drag1 = withExtras({ mode: 'move', x0: x, y0: y, orig: orig(sel), moved: false });
+  updateButtons(); dirty = true;
+}
+function selectMove(x, y) {
+  if (!drag1) return;
+  if (!drag1.moved) { snap1(); drag1.moved = true; }
+  if (drag1.mode === 'move') {
+    const dx = (x - drag1.x0) / M, dy = (y - drag1.y0) / M;
+    for (const [s, P0] of drag1.orig) s.pts = P0.map(([u, v]) => [u + dx, v + dy]);
+    for (const [f, u, v] of drag1.fl || []) { f.nx = u + dx; f.ny = v + dy; }
+    for (const [s, P0] of drag1.dc || []) { s.pts = P0.map(([u, v]) => [u + dx, v + dy]); s._g = null; }
+  } else if (drag1.mode === 'rotate') {
+    let a = Math.atan2(y - drag1.cy, x - drag1.cx) - drag1.a0;
+    const deg = a * 180 / Math.PI, snapD = Math.round(deg / 15) * 15;
+    if (Math.abs(deg - snapD) < 3) a = snapD * Math.PI / 180;   // 15도마다 살짝 붙는다
+    const ca = Math.cos(a), sa = Math.sin(a), [cu, cv] = toN(drag1.cx, drag1.cy);
+    const R = ([u, v]) => [cu + (u - cu) * ca - (v - cv) * sa, cv + (u - cu) * sa + (v - cv) * ca];
+    for (const [s, P0] of drag1.orig) s.pts = P0.map(R);
+    for (const [fl, u, v] of drag1.fl || []) { [fl.nx, fl.ny] = R([u, v]); }
+    for (const [s, P0] of drag1.dc || []) { s.pts = P0.map(R); s._g = null; }
+  } else {
+    const f = Math.max(.08, Math.hypot(x - drag1.cx, y - drag1.cy) / drag1.d0), [cu, cv] = toN(drag1.cx, drag1.cy);
+    for (const [s, P0] of drag1.orig) s.pts = P0.map(([u, v]) => [cu + (u - cu) * f, cv + (v - cv) * f]);
+    for (const [fl, u, v] of drag1.fl || []) { fl.nx = cu + (u - cu) * f; fl.ny = cv + (v - cv) * f; }
+    for (const [s, P0] of drag1.dc || []) { s.pts = P0.map(([u, v]) => [cu + (u - cu) * f, cv + (v - cv) * f]); s._g = null; }
+  }
+  renderDoan();
+}
+function drawSelection() {
+  if (step !== 1 || sel == null) return;
+  const b = groupBox(sel); if (!b) { sel = null; return; }
+  const z = zoomView.z, hs = Math.max(7, M * .012) / z;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(236,230,220,.85)'; ctx.lineWidth = 1.2 / z; ctx.setLineDash([5 / z, 4 / z]);
+  ctx.strokeRect(b[0], b[1], b[2] - b[0], b[3] - b[1]);
+  ctx.setLineDash([]); ctx.fillStyle = '#ece6dc';
+  for (const [cx, cy] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) ctx.fillRect(cx - hs / 2, cy - hs / 2, hs, hs);
+  const [hx, hy] = rotHandle(b);   // 회전 손잡이
+  ctx.beginPath(); ctx.moveTo((b[0] + b[2]) / 2, b[1]); ctx.lineTo(hx, hy); ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx, hy, hs * .75, 0, 6.2832); ctx.fill();
+  ctx.strokeStyle = '#070707'; ctx.lineWidth = 1.4 / z; ctx.beginPath(); ctx.arc(hx, hy, hs * .38, -2.4, 1.6); ctx.stroke();
+  ctx.restore();
+}
+function setTool1(t, k) {
+  tool1 = t; stampKind = t === 'stamp' ? k : null;
+  if (t !== 'select') sel = null;
+  $$('[data-shape]').forEach(x => x.setAttribute('aria-pressed', t === 'draw' && !erasing && x.dataset.shape === shape));
+  $$('[data-stamp]').forEach(x => x.setAttribute('aria-pressed', t === 'stamp' && x.dataset.stamp === k));
+  $('bSelect').setAttribute('aria-pressed', t === 'select');
+  $('hint').textContent = t === 'select' ? '선택 · 눌러 고른 뒤 끌어서 옮겨요. 모서리 점은 크기, 위쪽 동그라미는 회전이에요'
+    : t === 'stamp' ? STAMP_TIP[k] : shape === 'free' ? HINT[1] : '끌어서 크기를 정해요 · 잎·꽃잎은 끌기 시작점이 뿌리, 끝점이 끝이 돼요';
+  cv.style.cursor = t === 'select' ? 'move' : 'crosshair';
+  updateButtons(); dirty = true;
+}
+
+/* ---------- 확대·이동 ---------- */
+const zoomView = { z: 1, x: 0, y: 0 };
+let gestureLock = false, pinch = null;
+const tps = new Map();
+function clampZoom() {
+  const z = zoomView.z;
+  zoomView.x = Math.min(0, Math.max(W - W * z, zoomView.x));
+  zoomView.y = Math.min(0, Math.max(H - H * z, zoomView.y));
+}
+function applyZoom() {
+  clampZoom();
+  cv.style.transformOrigin = '0 0';
+  cv.style.transform = zoomView.z === 1 ? '' : `translate(${zoomView.x}px, ${zoomView.y}px) scale(${zoomView.z})`;
+  $('zPct').textContent = Math.round(zoomView.z * 100) + '%';
+  $('zoomUi').hidden = zoomView.z === 1;
+  if (zoomView.z > 1) $('hint').classList.add('dim');   // 확대 중에는 안내 문구를 숨겨 겹치지 않게
+}
+function zoomAt(sx, sy, z) {   // sx, sy: 판 기준 화면 좌표
+  z = Math.max(1, Math.min(6, z));
+  const ux = (sx - zoomView.x) / zoomView.z, uy = (sy - zoomView.y) / zoomView.z;
+  zoomView.z = z; zoomView.x = sx - ux * z; zoomView.y = sy - uy * z;
+  applyZoom();
+}
+function cancelAction() {
+  live = null; liveStamp = null; down = null; pick = null; touchAt = null;
+  if (drag1) { if (drag1.moved) doanChanged(); drag1 = null; }
+  pointers.clear(); renderDoan(); dirty = true;
+}
+const stageXY = e => { const r = stage.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+stage.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch' || e.target !== cv) return;
+  tps.set(e.pointerId, stageXY(e));
+  if (tps.size === 2) {
+    const [a, b] = [...tps.values()];
+    cancelAction(); gestureLock = true; activePid = null;
+    pinch = { d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z0: zoomView.z, m0: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], x0: zoomView.x, y0: zoomView.y };
+    e.stopPropagation();
+  } else if (tps.size > 2) e.stopPropagation();
+}, true);
+stage.addEventListener('pointermove', e => {
+  if (!tps.has(e.pointerId)) return;
+  tps.set(e.pointerId, stageXY(e));
+  if (!pinch || tps.size < 2) { if (gestureLock) e.stopPropagation(); return; }
+  e.stopPropagation();
+  const [a, b] = [...tps.values()], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const z = Math.max(1, Math.min(6, pinch.z0 * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d0));
+  const ux = (pinch.m0[0] - pinch.x0) / pinch.z0, uy = (pinch.m0[1] - pinch.y0) / pinch.z0;
+  zoomView.z = z; zoomView.x = m[0] - ux * z; zoomView.y = m[1] - uy * z;
+  applyZoom();
+}, true);
+const tpEnd = e => {
+  if (!tps.has(e.pointerId)) return;
+  tps.delete(e.pointerId);
+  if (tps.size < 2) pinch = null;
+  if (gestureLock) { e.stopPropagation(); if (!tps.size) gestureLock = false; }
+};
+['pointerup', 'pointercancel'].forEach(t => stage.addEventListener(t, tpEnd, true));
+stage.addEventListener('wheel', e => {
+  e.preventDefault();
+  const [sx, sy] = stageXY(e);
+  if (e.ctrlKey || Math.abs(e.deltaY) >= Math.abs(e.deltaX)) zoomAt(sx, sy, zoomView.z * Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015)));
+}, { passive: false });
+
+/* ---------- 회전·복제 ---------- */
+function rotHandle(b) { return [(b[0] + b[2]) / 2, b[1] - 24 / zoomView.z]; }
+function duplicateSel() {
+  if (sel == null || step !== 1) return;
+  const b = groupBox(sel); if (!b) return;
+  snap1();
+  const inB = (x, y) => x > b[0] && x < b[2] && y > b[1] && y < b[3], o = .045, ng = groupId++;
+  const sh = P => P.map(([u, v]) => [u + o, v + o]);
+  for (const s of doan.filter(s => s.g === sel)) doan.push({ ...s, pts: sh(s.pts), g: ng, seed: seedN++, _ps: undefined });
+  for (const f of fills.filter(f => inB(...toP(f.nx, f.ny)))) fills.push({ ...f, nx: f.nx + o, ny: f.ny + o });
+  for (const s of deco.filter(s => inB(...toP(...s.pts[0])))) deco.push({ ...s, pts: sh(s.pts), seed: seedN++, _g: null });
+  sel = ng; renderDoan(); doanChanged(); dirty = true;
+  toast('복제했어요. 끌어서 원하는 곳으로 옮기세요.');
+}
+
+/* ---------- 글자 장식: 글자 모양을 따라 자개 오릴 선을 만든다 ---------- */
+const glyphCache = new Map();
+function glyphData(str) {
+  if (glyphCache.has(str)) return glyphCache.get(str);
+  const fp = 200, font = `900 ${fp}px "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans CJK KR", sans-serif`;
+  const mc = document.createElement('canvas'), m = mc.getContext('2d', { willReadFrequently: true });
+  m.font = font;
+  const chars = [...str], gapC = fp * .1, ws = chars.map(ch => m.measureText(ch).width), pad = 24;
+  const tw = Math.ceil(ws.reduce((a, b) => a + b, 0) + gapC * (chars.length - 1));
+  mc.width = tw + pad * 2; mc.height = Math.ceil(fp * 1.3) + pad * 2;
+  m.font = font; m.textBaseline = 'middle'; m.fillStyle = '#fff';
+  m.lineJoin = 'round'; m.strokeStyle = '#fff'; m.lineWidth = fp * .015;   // 아주 살짝만 굵게(획이 서로 붙지 않도록)
+  let cx0 = pad;
+  chars.forEach((ch, i) => { m.strokeText(ch, cx0, mc.height / 2); m.fillText(ch, cx0, mc.height / 2); cx0 += ws[i] + gapC; });
+  const gw = mc.width, gh = mc.height, a = m.getImageData(0, 0, gw, gh).data, on = new Uint8Array(gw * gh);
+  let minY = gh, maxY = 0;
+  for (let i = 0; i < gw * gh; i++) if (a[i * 4 + 3] > 110) { on[i] = 1; const y = (i / gw) | 0; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  // 마칭 스퀘어로 윤곽선 찾기
+  const at = (x, y) => (x < 0 || y < 0 || x >= gw || y >= gh) ? 0 : on[y * gw + x];
+  const adj = new Map(), K = (x2, y2) => x2 * 100000 + y2;
+  const link = (p, q) => { const kp = K(p[0], p[1]), kq = K(q[0], q[1]); (adj.get(kp) || adj.set(kp, []).get(kp)).push(kq); (adj.get(kq) || adj.set(kq, []).get(kq)).push(kp); };
+  for (let y = -1; y < gh; y++) for (let x = -1; x < gw; x++) {
+    const tl = at(x, y), tr = at(x + 1, y), br = at(x + 1, y + 1), bl = at(x, y + 1), c = tl * 8 + tr * 4 + br * 2 + bl;
+    if (!c || c === 15) continue;
+    const T = [2 * x + 1, 2 * y], R = [2 * x + 2, 2 * y + 1], Bm = [2 * x + 1, 2 * y + 2], L = [2 * x, 2 * y + 1];
+    const segs = { 1: [[L, Bm]], 2: [[Bm, R]], 3: [[L, R]], 4: [[T, R]], 5: [[L, T], [Bm, R]], 6: [[T, Bm]], 7: [[L, T]], 8: [[L, T]], 9: [[T, Bm]], 10: [[T, R], [L, Bm]], 11: [[T, R]], 12: [[L, R]], 13: [[Bm, R]], 14: [[L, Bm]] }[c];
+    segs.forEach(([p, q]) => link(p, q));
+  }
+  const seen = new Set(), loops = [];
+  for (const k0 of adj.keys()) {
+    if (seen.has(k0)) continue;
+    const loop = []; let prev = -1, cur = k0;
+    while (cur !== undefined && !seen.has(cur)) {
+      seen.add(cur); loop.push([Math.floor(cur / 100000) / 2, (cur % 100000) / 2]);
+      const nb = adj.get(cur), nx = nb[0] !== prev ? nb[0] : nb[1]; prev = cur; cur = nx;
+    }
+    if (loop.length > 12) loops.push(loop);
+  }
+  const rdp = (P, eps) => {
+    if (P.length < 3) return P;
+    let dm = 0, idx = 0; const [ax, ay] = P[0], [bx, by] = P[P.length - 1], L = Math.hypot(bx - ax, by - ay) || 1;
+    for (let i = 1; i < P.length - 1; i++) { const d = Math.abs((by - ay) * P[i][0] - (bx - ax) * P[i][1] + bx * ay - by * ax) / L; if (d > dm) { dm = d; idx = i; } }
+    return dm > eps ? rdp(P.slice(0, idx + 1), eps).slice(0, -1).concat(rdp(P.slice(idx), eps)) : [P[0], P[P.length - 1]];
+  };
+  const smooth = P => { const out = []; for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; out.push([a[0] * .75 + b[0] * .25, a[1] * .75 + b[1] * .25], [a[0] * .25 + b[0] * .75, a[1] * .25 + b[1] * .75]); } return out; };
+  const outLoops = loops.map(P => { const half = Math.floor(P.length / 2); const s = rdp(P.slice(0, half + 1), 1).slice(0, -1).concat(rdp(P.slice(half).concat([P[0]]), 1).slice(0, -1)); const sm = smooth(s); sm.push(sm[0]); return sm; })
+    .filter(P => { let A = 0; for (let i = 1; i < P.length; i++) A += P[i - 1][0] * P[i][1] - P[i][0] * P[i - 1][1]; return Math.abs(A) / 2 > 60; });
+  // 획 안쪽(자개 붙일 곳)과 구멍(비워 둘 곳) 대표점
+  // 각 화소에서 반대쪽(획↔빈곳)까지의 거리 → 덩어리마다 가장 깊은 곳을 대표점으로
+  const N = gw * gh, dist = new Float32Array(N);
+  for (let i = 0; i < N; i++) dist[i] = 1e6;
+  const edge = i => { const x = i % gw, y = (i / gw) | 0, v = on[i]; return at(x - 1, y) !== v || at(x + 1, y) !== v || at(x, y - 1) !== v || at(x, y + 1) !== v; };
+  for (let i = 0; i < N; i++) if (edge(i)) dist[i] = 1;
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { const i = y * gw + x; let d0 = dist[i];
+    if (x > 0) d0 = Math.min(d0, dist[i - 1] + 1); if (y > 0) d0 = Math.min(d0, dist[i - gw] + 1);
+    if (x > 0 && y > 0) d0 = Math.min(d0, dist[i - gw - 1] + 1.41); if (x < gw - 1 && y > 0) d0 = Math.min(d0, dist[i - gw + 1] + 1.41); dist[i] = d0; }
+  for (let y = gh - 1; y >= 0; y--) for (let x = gw - 1; x >= 0; x--) { const i = y * gw + x; let d0 = dist[i];
+    if (x < gw - 1) d0 = Math.min(d0, dist[i + 1] + 1); if (y < gh - 1) d0 = Math.min(d0, dist[i + gw] + 1);
+    if (x < gw - 1 && y < gh - 1) d0 = Math.min(d0, dist[i + gw + 1] + 1.41); if (x > 0 && y < gh - 1) d0 = Math.min(d0, dist[i + gw - 1] + 1.41); dist[i] = d0; }
+  const comp = new Int32Array(N).fill(-1), Q = new Int32Array(N), fillPts = [], holePts = [];
+  const floodC = (i0, v, id) => { let h = 0, t = 0, best = i0; Q[t++] = i0; comp[i0] = id; while (h < t) { const i = Q[h++], x = i % gw; if (dist[i] > dist[best]) best = i; for (const j of [x > 0 ? i - 1 : -1, x < gw - 1 ? i + 1 : -1, i - gw, i + gw]) { if (j < 0 || j >= N || comp[j] !== -1 || on[j] !== v) continue; comp[j] = id; Q[t++] = j; } } return { best, depth: dist[best] }; };
+  let id = 0;
+  for (let i = 0; i < N; i++) if (on[i] && comp[i] === -1) { const r = floodC(i, 1, id++); if (r.depth >= 4) fillPts.push([r.best % gw, (r.best / gw) | 0]); }
+  floodC(0, 0, id++);   // 바깥 배경
+  // 구멍은 판에 옮겼을 때도 남을 만큼 넓을 때만 비워 둠 표시
+  for (let i = 0; i < N; i++) if (!on[i] && comp[i] === -1) { const r = floodC(i, 0, id++); if (r.depth >= 7) holePts.push([r.best % gw, (r.best / gw) | 0]); }
+  const d = { loops: outLoops, fillPts, holePts, cx: gw / 2, cy: (minY + maxY) / 2, h: Math.max(1, maxY - minY) };
+  glyphCache.set(str, d);
+  return d;
+}
+function textStamp(str, ax, ay, S) {
+  const G = glyphData(str), k = S / G.h, T = ([x, y]) => toN(ax + (x - G.cx) * k, ay + (y - G.cy) * k);
+  const strokes = G.loops.map(P => ({ pts: P.map(T), lw: 0, kind: 'cut', erase: false, seed: seedN++, inlay: null }));
+  strokes.fills = G.fillPts.map(p => { const [nx, ny] = T(p); return { nx, ny, type: 1 }; })
+    .concat(G.holePts.map(p => { const [nx, ny] = T(p); return { nx, ny, type: -1 }; }));
+  return strokes;
+}
+
+/* ---------- 사진 밑그림 ---------- */
+let photo = null;
+function drawPhoto() {
+  if (!photo || step !== 1) return;
+  const L0 = (W - BW) / 2, T0 = (H - BH) / 2, k = Math.min(BW / photo.width, BH / photo.height);
+  const w = photo.width * k, h = photo.height * k;
+  ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = .38;
+  ctx.drawImage(photo, L0 + (BW - w) / 2, T0 + (BH - h) / 2, w, h);
+  ctx.restore();
+}
+
+/* ---------- 옻칠 바탕색 ---------- */
+const LACQ = { black: ['#19191b', '#0a0a0b', '#020202'], red: ['#5e1d14', '#3e0f09', '#1c0503'], brown: ['#3d2616', '#24160c', '#0d0805'] };
+let lacq = 'black';
+
+/* ---------- 예시 도안: 달과 매화 가지 ---------- */
+function sampleDoan() {
+  const S = [];
+  let sd = 21;
+  const bez = (a, b, c, t) => [(1 - t) ** 2 * a[0] + 2 * (1 - t) * t * b[0] + t * t * c[0], (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * b[1] + t * t * c[1]];
+  const curve = (a, b, c, n = 30) => Array.from({ length: n + 1 }, (_, i) => bez(a, b, c, i / n));
+  const ring = (cx, cy, r, n = 60) => Array.from({ length: n + 1 }, (_, i) => [cx + Math.cos(i / n * 6.283) * r, cy + Math.sin(i / n * 6.283) * r]);
+  const add = (pts, lw = 0, kind = 'cut') => S.push({ pts: pts.map(([x, y]) => [x * .8 + .05, y * .8 + .02]), lw, kind, erase: false, g: groupId++, seed: sd++, inlay: null });
+  const onRing = (cx, cy, r, a) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  // 달: 둥근 테와 초승달 가름선, 구름 걸친 선
+  add(ring(.26, -.2, .15, 90), 1);
+  add(curve(onRing(.26, -.2, .15, -2.1), [.36, -.2], onRing(.26, -.2, .15, 2.1)));
+  add(curve(onRing(.26, -.2, .15, -.5), [.3, -.14], onRing(.26, -.2, .15, 1.2)), 0, 'carve');
+  add(curve([.33, -.29], [.37, -.22], [.36, -.13]), 0, 'carve');
+  // 매화 가지: 굵기가 줄어드는 윤곽 + 마디 가름선
+  const branch = (a, b, c, w0, w1, cuts) => {
+    const L = [], R = [], n = 40;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, p = bez(a, b, c, t), q = bez(a, b, c, Math.min(1, t + .01)), p0 = bez(a, b, c, Math.max(0, t - .01));
+      const dx = q[0] - p0[0], dy = q[1] - p0[1], d = Math.hypot(dx, dy) || 1, w = w0 + (w1 - w0) * t;
+      L.push([p[0] - dy / d * w, p[1] + dx / d * w]); R.push([p[0] + dy / d * w, p[1] - dx / d * w]);
+    }
+    add(L.concat(R.reverse(), [L[0]]), 1);
+    add(curve(bez(a, b, c, .04), b, bez(a, b, c, .96), 30), 0, 'carve');   // 나뭇결 새김
+    cuts.forEach(t => { const k = Math.round(t * n); add([L[k], R[n - k]]); });
+  };
+  branch([-.56, .44], [-.22, .3], [.02, -.02], .04, .012, [.22, .45, .7]);
+  branch([-.3, .32], [-.38, .14], [-.46, .04], .026, .012, [.5]);
+  branch([-.12, .16], [.04, .18], [.14, .28], .024, .011, [.55]);
+  // 매화꽃: 꽃잎 다섯 장과 꽃술
+  const flower = (x, y, r) => {
+    for (let k = 0; k < 5; k++) { const a = k / 5 * 6.283 - Math.PI / 2; add(ring(x + Math.cos(a) * r, y + Math.sin(a) * r, r * .72, 30)); }
+    add(ring(x, y, r * .38, 20));
+    for (let k = 0; k < 5; k++) { const a = k / 5 * 6.283 - Math.PI / 2; for (const da of [-.18, 0, .18]) add([[x + Math.cos(a + da) * r * .5, y + Math.sin(a + da) * r * .5], [x + Math.cos(a + da) * r * 1.2, y + Math.sin(a + da) * r * 1.2]], 0, 'carve'); }
+  };
+  flower(-.02, -.06, .045); flower(-.3, .2, .04); flower(-.47, .0, .032); flower(.15, .3, .032);
+  // 꽃봉오리
+  add(ring(.07, .07, .018, 20)); add(ring(-.17, .1, .016, 20)); add(ring(-.4, .3, .015, 20));
+  return S;
+}
+
+/* ---------- 붙이기 단계: 칸 누르기 ---------- */
+function snapshot() { hist.push({ fills: fills.map(f => ({ ...f })), inl: doan.map(s => s.inlay ?? null), deco: deco.length }); if (hist.length > 60) hist.shift(); updateButtons(); }
+let pick = null, touchAt = null, pickXY = null;
+function findTarget(x, y) {
+  if (!REG) return null;
+  if (tool === 'fill') {
+    const xi = Math.max(0, Math.min(W - 1, x | 0)), yi = Math.max(0, Math.min(H - 1, y | 0));
+    let r = REG.lab[yi * W + xi];
+    if (r < 0) {   // 선 위를 눌렀으면 가장 가까운 칸
+      let bd = 1e9; const R = Math.max(10, M * .03) | 0;
+      for (let dy = -R; dy <= R; dy += 2) for (let dx = -R; dx <= R; dx += 2) {
+        const xx = xi + dx, yy = yi + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+        const v = REG.lab[yy * W + xx], d = dx * dx + dy * dy; if (v >= 0 && d < bd) { bd = d; r = v; }
+      }
+    }
+    return r >= 0 ? { kind: 'region', r, x, y } : null;
+  }
+  let best = Math.max(24, M * .06) / zoomView.z, bs = null;   // 선 고르기: 손가락 굵기만큼 넉넉하게
+  for (const s of doan) {
+    if (s.erase || s.kind === 'carve') continue;
+    for (let i = 0; i < s.pts.length; i++) {
+      const a = toP(...s.pts[i]), b = toP(...s.pts[Math.min(s.pts.length - 1, i + 1)]);
+      const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy;
+      const t = L2 ? Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2)) : 0;
+      const d = Math.hypot(x - a[0] - dx * t, y - a[1] - dy * t);
+      if (d < best) { best = d; bs = s; }
+    }
+  }
+  return bs ? { kind: 'line', s: bs, x, y } : null;
+}
+let pickRid = -1;
+function drawPick(t) {
+  if (!pick) return;
+  const a = .3 + .12 * Math.sin(t * 8);
+  if (pick.kind === 'region') {
+    if (pickRid !== pick.r) {
+      const c = canvasFor('pickR', W, H), img = new ImageData(W, H), d = img.data, lab = REG.lab, r = pick.r;
+      for (let i = 0; i < lab.length; i++) if (lab[i] === r) { const o = i * 4; d[o] = 255; d[o + 1] = 250; d[o + 2] = 240; d[o + 3] = 255; }
+      c.getContext('2d').putImageData(img, 0, 0); pickRid = r;
+    }
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.globalAlpha = a; ctx.drawImage(POOL.pickR, 0, 0, W, H); ctx.globalAlpha = 1;
+  } else {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.globalAlpha = a + .2; pathLine(ctx, pick.s.pts, penW(pick.s) * 2.6 + 4, '#fffaf0', false); ctx.globalAlpha = 1;
+  }
+}
+// 돋보기: 손가락에 가려지는 자리를 손가락 위쪽에 2배로 보여 준다
+function drawLoupe() {
+  if (!touchAt || zoomView.z > 1.6) return;
+  const z = 2, R = Math.min(64, M * .16), gap = 26;
+  let cx = touchAt.x, cy = touchAt.y - R - gap;
+  if (cy < R + 6) cy = touchAt.y + R + gap;
+  cx = Math.max(R + 6, Math.min(W - R - 6, cx));
+  ctx.save();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.2832); ctx.closePath();
+  ctx.fillStyle = '#070707'; ctx.fill(); ctx.clip();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const sr = R / z * DPR;
+  ctx.drawImage(cv, touchAt.x * DPR - sr, touchAt.y * DPR - sr, sr * 2, sr * 2, (cx - R) * DPR, (cy - R) * DPR, R * 2 * DPR, R * 2 * DPR);
+  ctx.restore();
+  ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.strokeStyle = 'rgba(236,230,220,.85)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.2832); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - 6, cy); ctx.lineTo(cx + 6, cy); ctx.moveTo(cx, cy - 6); ctx.lineTo(cx, cy + 6); ctx.stroke();
+  ctx.restore();
+}
+function applyPick(p) {
+  if (!p) {
+    let open = false;
+    if (tool === 'fill' && pickXY && REG) { const xi = Math.max(0, Math.min(W - 1, pickXY[0] | 0)), yi = Math.max(0, Math.min(H - 1, pickXY[1] | 0)); open = REG.lab[yi * W + xi] === -2; }
+    toast(tool !== 'fill' ? '도안 선 가까이를 눌러 주세요.' : open ? '여기는 칸이 닫혀 있지 않아요. 도안 단계에서 끊긴 선을 이어 주면 채울 수 있어요.' : '선으로 둘러싸인 칸을 눌러 주세요.', 4500);
+    return;
+  }
+  snapshot();
+  if (p.kind === 'region') {
+    const prev = fills.find(f => regionAt(f.nx, f.ny) === p.r);
+    fills = fills.filter(f => regionAt(f.nx, f.ny) !== p.r);
+    if (!prev || prev.type !== curType) {
+      const rp = REG.regions[p.r].rep, [nx, ny] = toN(rp % W + .5, ((rp / W) | 0) + .5);
+      fills.push({ nx, ny, type: curType });
+    }
+  } else p.s.inlay = p.s.inlay === curType ? null : curType;
+  compose();
+}
+function tapAt(x, y) {
+  const xi = Math.max(0, Math.min(W - 1, x | 0)), yi = Math.max(0, Math.min(H - 1, y | 0));
+  const r = REG.lab[yi * W + xi];
+  if (r >= 0) {
+    snapshot();
+    const prev = fills.find(f => regionAt(f.nx, f.ny) === r);
+    fills = fills.filter(f => regionAt(f.nx, f.ny) !== r);
+    if (!prev || prev.type !== curType) { const [nx, ny] = toN(x, y); fills.push({ nx, ny, type: curType }); burst(x, y, 6); }
+    compose(); return;
+  }
+  // 선 가까이 → 그 선을 끊음질로
+  let best = 1e9, bs = null;
+  for (const s of doan) {
+    if (s.erase || s.kind === 'carve') continue;
+    for (const p of s.pts) { const [px, py] = toP(...p), d = Math.hypot(px - x, py - y); if (d < best) { best = d; bs = s; } }
+  }
+  if (bs && best < Math.max(12, penW(bs) * 3)) {
+    snapshot();
+    bs.inlay = bs.inlay === curType ? null : curType;
+    compose(); burst(x, y, 4); return;
+  }
+  toast('선으로 둘러싸인 칸이나 도안 선을 눌러 주세요.');
+}
+function autoFill() {
+  if (!REG) return;
+  snapshot();
+  const used = new Set(fills.map(f => regionAt(f.nx, f.ny)));
+  const pick = () => { const v = Math.random(); return v < .42 ? 0 : v < .88 ? 1 : v < .96 ? 2 : 3; };
+  REG.regions.forEach((rg, id) => {
+    if (used.has(id) || rg.area > W * H * .2) return;   // 테두리 안 바탕처럼 아주 큰 칸은 건너뜀
+    const x = rg.rep % W + .5, y = ((rg.rep / W) | 0) + .5, [nx, ny] = toN(x, y);
+    fills.push({ nx, ny, type: pick() });
+  });
+  compose();
+}
+
+/* ---------- 입력 ---------- */
+function localXY(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height]; }
+let down = null;
+let activePid = null;
+cv.addEventListener('pointerdown', e => {
+  if (gestureLock) return;
+  if (step <= 2) { if (activePid != null && activePid !== e.pointerId) return; activePid = e.pointerId; }
+  const [x, y] = localXY(e);
+  if (step === 1 && tool1 === 'select') { cv.setPointerCapture(e.pointerId); selectDown(x, y); }
+  else if (step === 1 && tool1 === 'stamp') {
+    cv.setPointerCapture(e.pointerId);
+    down = { x, y };
+    liveStamp = stampStrokes(stampKind, x, y, M * (STAMP_SIZE[stampKind] || 1)); renderDoan();
+  }
+  else if (step === 1) {
+    cv.setPointerCapture(e.pointerId);
+    live = { pts: [toN(x, y)], lw: penSize, kind: penKind, erase: erasing, seed: seedN++, inlay: null, shape: erasing ? 'free' : shape, a: [x, y] };
+    renderDoan();
+  } else if (step === 2) {
+    cv.setPointerCapture(e.pointerId);
+    if (tool === 'fill' || tool === 'line') { down = { x, y }; pickXY = [x, y]; pick = findTarget(x, y); touchAt = e.pointerType === 'mouse' ? null : { x, y }; }
+    else { live = { brush: tool, type: curType, size: decoSize, pts: [toN(x, y)], seed: seedN++ }; dirty = true; }
+  } else {
+    cv.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x, y, px: x, py: y, down: true });
+    if (step === 3) rub(x, y, x, y);
+    else { const [ax, ay] = toArt(x, y); ripples.push({ x: ax, y: ay, t: performance.now() / 1000 }); burst(ax, ay, 10); }
+  }
+});
+cv.addEventListener('pointermove', e => {
+  if (gestureLock) return;
+  if (step <= 2 && activePid != null && e.pointerId !== activePid) return;
+  const [x, y] = localXY(e);
+  view.mx = x; view.my = y; view.mt = performance.now();
+  if (step === 1 && tool1 === 'select') selectMove(x, y);
+  else if (step === 1 && tool1 === 'stamp') {
+    if (down && stampKind !== 'frame') {
+      const d = Math.hypot(x - down.x, y - down.y);
+      if (d > 12) { liveStamp = stampStrokes(stampKind, down.x, down.y, Math.max(M * (stampKind === 'text' ? .1 : .04), d * (STAMP_DRAG[stampKind] || 1))); renderDoan(); }
+    }
+  }
+  else if (step === 1) {
+    if (live && live.shape !== 'free') { live.pts = shapePts(live.shape, live.a, [x, y]); renderDoan(); return; }
+    if (live) {
+      // 손떨림 보정 15%: 새 점을 직전 점 쪽으로 15% 당겨 잔떨림을 줄인다
+      const [lx, ly] = toP(...live.pts[live.pts.length - 1]), k = 1 - STABILIZE;
+      live.raw = [x, y];
+      live.pts.push(toN(lx + (x - lx) * k, ly + (y - ly) * k)); renderDoan();
+    }
+  }
+  else if (step === 2) {
+    if (live) { live.pts.push(toN(x, y)); live._g = null; dirty = true; }
+    else if (down) { pickXY = [x, y]; pick = findTarget(x, y); if (touchAt) touchAt = { x, y }; }
+  }
+  else {
+    const p = pointers.get(e.pointerId);
+    if (p) { if (step === 3 && p.down) rub(p.x, p.y, x, y); p.x = x; p.y = y; }
+    else if (e.pointerType === 'mouse') pointers.set(e.pointerId, { x, y, px: x, py: y, down: false });
+  }
+});
+function endPointer(e) {
+  if (gestureLock) return;
+  if (step <= 2) { if (activePid != null && e.pointerId !== activePid) return; if (e.type !== 'pointerleave' || !cv.hasPointerCapture(e.pointerId)) activePid = null; }
+  if (step === 1 && tool1 === 'select') {
+    if (drag1) { if (drag1.moved) doanChanged(); drag1 = null; dirty = true; }
+  } else if (step === 1 && tool1 === 'stamp') {
+    if (liveStamp && e.type !== 'pointerleave' || liveStamp && down) {
+      snap1(); const g = groupId++;
+      liveStamp.forEach(s => { s.g = g; doan.push(s); });
+      if (liveStamp.fills) fills.push(...liveStamp.fills);   // 글자 획은 진주패로 미리 채워 둠
+      liveStamp = null; renderDoan(); doanChanged();
+    }
+    down = null;
+  } else if (step === 1 && live) {
+    if (live.raw) { live.pts.push(toN(...live.raw)); delete live.raw; }   // 끝점은 손을 뗀 자리로
+    if (live.shape !== 'free' && (live.pts.length < 3 || Math.hypot(...toP(...live.pts[live.pts.length >> 1]).map((v, i) => v - live.a[i])) < 4)) { live = null; renderDoan(); return; }   // 끌지 않고 누른 건 무시
+    if (!live.erase && (live.shape === 'free' || live.shape === 'line') && live.pts.length > 2) snapEnds(live);
+    delete live.a;
+    snap1();
+    live.g = groupId++; doan.push(live);
+    if (mirror) doan.push({ ...live, pts: live.pts.map(([x, y]) => [-x, y]), seed: live.seed + 5000 });
+    live = null; renderDoan(); doanChanged();
+  } else if (step === 2) {
+    if (down && e.type === 'pointerup') applyPick(pick);
+    if (down) { pick = null; touchAt = null; }
+    down = null;
+    if (live) { snapshot(); live._g = null; deco.push(live); live = null; compose(); }
+  } else if (e.pointerType !== 'mouse' || e.type === 'pointerleave') pointers.delete(e.pointerId);
+  else { const p = pointers.get(e.pointerId); if (p) p.down = false; }
+}
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => cv.addEventListener(t, endPointer));
+
+// 흩날리는 반짝이 입자는 쓰지 않는다(빛 물결과 자개 자체의 반짝임만 남김)
+function burst() {}
+
+/* ---------- 손 인식 (MediaPipe) ---------- */
+let handLM = null, camOn = false, lastVT = -1;
+const video = $('vid');
+const setCamLabels = () => $$('.bCam').forEach(b => b.textContent = camOn ? '카메라 끄기' : (b.closest('#tray3') ? '카메라로 갈아내기' : '카메라로 만지기'));
+async function startCamera() {
+  if (camOn) { stopCamera(); return; }
+  $$('.bCam').forEach(b => b.disabled = true);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
+    video.srcObject = stream; await video.play();
+    $('cam').hidden = false; $('camState').textContent = '손 인식 준비 중…';
+    if (!handLM) {
+      const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs');
+      const files = await vision.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+      const opts = d => ({ baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task', delegate: d }, runningMode: 'VIDEO', numHands: 2 });
+      try { handLM = await vision.HandLandmarker.createFromOptions(files, opts('GPU')); }
+      catch { handLM = await vision.HandLandmarker.createFromOptions(files, opts('CPU')); }
+    }
+    camOn = true; $('camState').textContent = '손을 보여 주세요';
+    toast(step === 3 ? '검지 끝을 움직여 옻칠을 문질러 갈아내 보세요.' : '검지 끝으로 자개를 쓸어 보세요. 엄지와 검지를 모으면 빛 물결이 퍼져요.');
+  } catch (err) {
+    stopCamera();
+    toast('카메라를 켤 수 없어요. 웹사이트 주소(https)로 열었는지, 카메라 권한을 허용했는지 확인해 주세요. 손가락이나 마우스로도 똑같이 할 수 있어요.', 6000);
+  }
+  $$('.bCam').forEach(b => b.disabled = false); setCamLabels();
+}
+function stopCamera() {
+  camOn = false; hands = [];
+  const s = video.srcObject; if (s) s.getTracks().forEach(t => t.stop());
+  video.srcObject = null; $('cam').hidden = true; setCamLabels();
+}
+function trackHands() {
+  if (!camOn || !handLM || video.readyState < 2 || video.currentTime === lastVT) return;
+  lastVT = video.currentTime;
+  const res = handLM.detectForVideo(video, performance.now());
+  const map = v => Math.min(1, Math.max(0, (v - .12) / .76));
+  hands = (res.landmarks || []).map((lm, i) => {
+    const tx = (1 - map(lm[8].x)) * W, ty = map(lm[8].y) * H;
+    const size = Math.hypot(lm[0].x - lm[9].x, lm[0].y - lm[9].y) || .1;
+    const pinch = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y) / size < .35;
+    const prev = hands[i];
+    const h = prev ? { x: prev.x + (tx - prev.x) * .5, y: prev.y + (ty - prev.y) * .5, pinch, px: prev.x, py: prev.y } : { x: tx, y: ty, pinch, px: tx, py: ty };
+    if (step === 3) rub(h.px, h.py, h.x, h.y);
+    else if (pinch && !(prev && prev.pinch)) { const [ax, ay] = toArt(h.x, h.y); ripples.push({ x: ax, y: ay, t: performance.now() / 1000 }); burst(ax, ay, 14); }
+    return h;
+  });
+  $('camState').textContent = hands.length ? `손 ${hands.length}개` : '손을 보여 주세요';
+}
+
+/* ---------- 그리기 루프 ---------- */
+let VT = null;
+const toArt = (x, y) => [x, y];
+function drawSeal() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const nm = ($('workName').value || '').trim();
+  if (!nm) return;
+  const fs = Math.max(12, M * .032), sz = fs * 1.35, bx = W - 14 - sz, by = H - 14 - sz;
+  ctx.fillStyle = '#9a3324'; ctx.fillRect(bx, by, sz, sz);
+  ctx.fillStyle = '#ece6dc'; ctx.font = `${fs * .9}px "Song Myung", serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('螺', bx + sz / 2, by + sz / 2 + 1);
+  ctx.fillStyle = 'rgba(236,230,220,.72)'; ctx.font = `${fs}px "Song Myung", serif`; ctx.textAlign = 'right';
+  ctx.fillText(nm, bx - 8, by + sz / 2 + 1);
+  ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
+}
+function drawHandRings() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.strokeStyle = 'rgba(236,230,220,.8)'; ctx.lineWidth = 1.5;
+  for (const h of hands) { ctx.beginPath(); ctx.arc(h.x, h.y, h.pinch ? 8 : 14, 0, 6.283); ctx.stroke(); }
+}
+
+/* ---------- 보는 각도: 기기 기울기 > 손(카메라) > 손가락·마우스 > 천천히 흔들림 ---------- */
+const view = { tx: 0, ty: 0, gx: null, gy: null, mx: null, my: null, mt: 0, lastT: -1 };
+function updateView(t) {
+  if (t === view.lastT) return; view.lastT = t;
+  let tx, ty;
+  if (view.gx != null) { tx = view.gx; ty = view.gy; }
+  else if (hands.length) { tx = (hands[0].x / W - .5) * 1.2; ty = (hands[0].y / H - .5) * 1.2; }
+  else if (view.mx != null && performance.now() - view.mt < 5000) { tx = (view.mx / W - .5) * 1.2; ty = (view.my / H - .5) * 1.2; }
+  else if (reduce) { tx = .2; ty = .1; }
+  else { tx = .45 * Math.sin(t * .27); ty = .32 * Math.sin(t * .19 + 1); }
+  view.tx += (tx - view.tx) * .12; view.ty += (ty - view.ty) * .12;
+}
+let tiltOn = false;
+async function enableTilt() {
+  try {
+    if (typeof DeviceOrientationEvent === 'undefined') throw 0;
+    if (DeviceOrientationEvent.requestPermission) { const r = await DeviceOrientationEvent.requestPermission(); if (r !== 'granted') throw 0; }
+    if (!tiltOn) {
+      tiltOn = true;
+      window.addEventListener('deviceorientation', e => {
+        if (e.gamma == null || e.beta == null) return;
+        view.gx = Math.max(-.9, Math.min(.9, e.gamma / 40)); view.gy = Math.max(-.9, Math.min(.9, (e.beta - 40) / 40));
+      });
+    }
+    setTimeout(() => toast(view.gx != null ? '기기를 이리저리 기울여 보세요. 보는 각도에 따라 무지개빛이 달라져요.' : '이 기기에서는 기울기를 읽지 못했어요. 손가락이나 마우스를 움직이면 보는 각도가 바뀌어요.', 4500), 900);
+  } catch { toast('기울기를 쓸 수 없어요. 손가락이나 마우스를 움직이면 보는 각도가 바뀌어요.', 4500); }
+}
+
+function frame(ms) {
+  const t = ms / 1000;
+  if (step >= 2 && NB && perf.last && document.visibilityState === 'visible') {
+    const dt = ms - perf.last;
+    if (dt < 300) { perf.sum += dt; perf.n++; }
+    if (perf.n >= 45) {
+      if (perf.sum / perf.n > 38) {   // 느리면 화면 선명도부터 낮추고, 그래도 느리면 자개빛 계산 해상도를 낮춘다
+        if (DPR_CAP > 1 && DPR > 1) { DPR_CAP = DPR_CAP > 1.5 ? 1.5 : 1; resize(); }
+        else if (PIX_BUDGET > 60000) { PIX_BUDGET = Math.round(PIX_BUDGET * .62); try { buildNacre(); } catch (e) { reportError(e); } }
+      }
+      perf.n = 0; perf.sum = 0;
+    }
+  }
+  perf.last = ms;
+  try {
+    if (step === 1) { if (dirty) { drawFlat(); dirty = false; } }
+    else if (step === 2) {
+      VT = null; drawFlat();
+      if (NB) drawNacre(t, false, true);
+      if (live) { ctx.setTransform(DPR, 0, 0, DPR, 0, 0); drawStroke(ctx, live, inkStyle(live), 0); }
+      drawPick(t); drawLoupe();
+    }
+    else {
+      trackHands();
+      drawNacre(t);
+      if (step === 4) { drawSeal(); drawHandRings(); }
+      if (step === 3) drawCover(t);
+    }
+  } catch (e) { reportError(e); }
+  requestAnimationFrame(frame);
+}
+function drawFlat() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(bg, 0, 0);
+  drawPhoto();
+  if (POOL.doanInk) { ctx.globalAlpha = step === 1 ? 1 : .5; ctx.drawImage(POOL.doanInk, 0, 0); ctx.globalAlpha = 1; }
+  if (step === 2 && POOL.prev && !NB) ctx.drawImage(POOL.prev, 0, 0);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (step === 2 && live) drawStroke(ctx, live, inkStyle(live), 0);
+  drawSelection();
+  if (step === 1 && mirror) { ctx.save(); ctx.strokeStyle = 'rgba(236,230,220,.28)'; ctx.setLineDash([4, 6]); ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke(); ctx.restore(); }
+}
+function drawCover(t) {
+  checkPolish(t);
+  if (polish.done) {
+    polish.fade = Math.max(0, 1 - (t - polish.fadeT) / .9);
+    if (polish.fade <= 0) { goStep(4); return; }
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = polish.fade; ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(POOL.cover, 0, 0, W * DPR, H * DPR);
+  ctx.globalAlpha = 1;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const rr = M * .07;
+  ctx.strokeStyle = 'rgba(236,230,220,.55)'; ctx.lineWidth = 1.2;
+  for (const p of pointers.values()) { ctx.beginPath(); ctx.arc(p.x, p.y, rr * .8, 0, 6.283); ctx.stroke(); }
+  for (const h of hands) { ctx.beginPath(); ctx.arc(h.x, h.y, rr * .8, 0, 6.283); ctx.stroke(); }
+}
+function drawNacre(t, showName, noBg) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  if (!NB) { if (!noBg) ctx.drawImage(bg, 0, 0); return; }
+  ctx.drawImage(noBg ? NB.rim : NB.bgrim, 0, 0);
+  const B = NB;
+  const lights = [];
+  const addL = o => { const [x, y] = toArt(o.x, o.y), [px, py] = toArt(o.px, o.py); lights.push({ x, y, s: 1, px, py, touch: true }); };
+  hands.forEach(addL); pointers.forEach(addL);
+  if (!lights.length) lights.push({ x: W * (.5 + .45 * Math.sin(t * .17)), y: H * (.5 + .4 * Math.sin(t * .23 + 1)), s: .7 });
+  const main = lights[0], R = M * .22, R2 = 2 * R * R;
+  for (const p of B.pieces) {
+    for (const L of lights) {
+      if (!L.touch) continue;
+      const d = Math.hypot(p.x - L.x, p.y - L.y), sp = Math.hypot(L.x - L.px, L.y - L.py);
+      if (d < B.C * .9) p.tv += (1 - d / (B.C * .9)) * (.015 + Math.min(sp, 40) * .005);
+    }
+    p.tv += -p.tilt * .05; p.tv *= .9; p.tilt += p.tv;
+    p.facet = Math.cos(p.nrm + p.tilt * 2 - Math.atan2(main.y - p.y, main.x - p.x)) * .6;
+  }
+  for (let i = ripples.length - 1; i >= 0; i--) if (t - ripples[i].t > 2) ripples.splice(i, 1);
+  updateView(t);
+  // 완성 뒤에는 손대지 않아도 은은한 물결과 반짝임이 계속 일어난다
+  const live4 = step === 4 && !reduce && B.n > 0;
+  if (live4 && t > ambient.next) {
+    const q0 = (Math.random() * B.n) | 0;
+    ripples.push({ x: B.px[q0], y: B.py[q0], t, s: .45 });
+    ambient.next = t + 1.4 + Math.random() * 1.8;
+  }
+  if (live4) {
+    const dt = Math.min(.1, t - (ambient.last || t)), want = dt * (2.2 + B.n / 9000);
+    for (let i = 0; i < 4 && Math.random() < want - i; i++) {
+      const q0 = (Math.random() * B.n) | 0;
+      void q0;   // 별빛 반짝임은 쓰지 않음
+    }
+  }
+  ambient.last = t;
+  const sweepOn = live4, sweepN = W * .8 + H * .6, sweepPos = ((t % 7) / 7) * 1.5 - .25;
+  const V = view, drift = reduce ? 0 : t * .035, d = B.img.data, rw = M * .04, P4 = B.pieces;
+  for (let q = 0; q < B.n; q++) {
+    const x = B.px[q], y = B.py[q], ty = B.ptype[q], P = NAC[ty], o4 = q * 4;
+    let tilt = 0, facet = 0;
+    for (let z = 0; z < 4; z++) { const pc = P4[B.pw[o4 + z]], w = B.pwt[o4 + z]; tilt += pc.tilt * w; facet += pc.facet * w; }
+    let g = 0;
+    for (const L of lights) { const dx = x - L.x, dy = y - L.y; g += Math.exp(-(dx * dx + dy * dy) / R2) * L.s; }
+    let rip = 0;
+    for (const r of ripples) {
+      const age = t - r.t, dd = Math.hypot(x - r.x, y - r.y) - age * M * .85;
+      rip += Math.exp(-dd * dd / (2 * rw * rw)) * (1 - age / 2) * (r.s || 1);
+    }
+    // 박막 간섭: 보는 각도·층의 기울기·조각 기울기에 따라 광로차가 달라지고, 빨강·초록·파랑이 서로 다르게 겹친다
+    const ax = V.tx + B.nx[q] + tilt * .3, ay = V.ty + B.ny[q] + facet * .15;
+    const cosT = Math.sqrt(1 - Math.min(.95, ax * ax + ay * ay) / 2.34);   // 진주층 굴절률 1.53
+    const opd = B.od[q] * cosT * (1 + rip * .1 + g * .04) + drift * 40;
+    // 광로차를 무지개 한 바퀴(빨-노-초-청-보)로 고르게 펼친다 → 각도가 바뀌면 띠가 흐른다
+    let ph1 = opd * .0016129; ph1 -= Math.floor(ph1);
+    const li = ((ph1 * 256) | 0) * 3, k = B.ik[q] * (1 - Math.min(.5, g * .3)) * 1.25;
+    const ir = NAC_LUT[li], ig = NAC_LUT[li + 1], ib = NAC_LUT[li + 2], avg = 0;
+    // 연마한 표면을 지나가는 빛줄기
+    const swp = sweepOn ? Math.exp(-(((x * .8 + y * .6) / sweepN - sweepPos) ** 2) / .0032) : 0;
+    const glint = Math.pow(Math.max(0, facet), 5);
+    const shv = B.sh[q] * (.6 + .4 * Math.cos(opd * .004 + tilt));
+    const L = Math.min(.95, Math.max(.18, (B.lb[q] + facet * 4 + g * 10 + glint * 8 + rip * 10 + shv * (9 + g * 18) + swp * 9) / 100));
+    const T = P.tint, o = B.pos[q];
+    d[o] = (L + (ir - avg) * k) * T[0] * 255; d[o + 1] = (L + (ig - avg) * k) * T[1] * 255; d[o + 2] = (L + (ib - avg) * k) * T[2] * 255; d[o + 3] = 255;
+  }
+  B.fctx.putImageData(B.img, 0, 0);
+  const lc = B.lctx, LW = B.layer.width, LH = B.layer.height;
+  lc.globalCompositeOperation = 'source-over';
+  lc.clearRect(0, 0, LW, LH);
+  lc.imageSmoothingEnabled = true; lc.imageSmoothingQuality = 'high';
+  lc.drawImage(B.field, 0, 0, LW, LH);
+  lc.globalCompositeOperation = 'destination-in';
+  lc.drawImage(B.maskHi, 0, 0);
+  lc.globalCompositeOperation = 'source-over';
+  ctx.drawImage(B.layer, 0, 0);
+
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.globalCompositeOperation = 'screen';
+  for (const L of lights) {
+    const gr = ctx.createRadialGradient(L.x, L.y, 0, L.x, L.y, R * 1.5);
+    gr.addColorStop(0, `rgba(255,244,230,${.09 * L.s})`); gr.addColorStop(1, 'rgba(255,244,230,0)');
+    ctx.fillStyle = gr; ctx.fillRect(L.x - R * 1.5, L.y - R * 1.5, R * 3, R * 3);
+    if (step === 4 && L.touch && Math.hypot(L.x - L.px, L.y - L.py) > 6 && Math.random() < .5) burst(L.x + (Math.random() - .5) * 30, L.y + (Math.random() - .5) * 30, 1);
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = glints.length - 1; i >= 0; i--) {   // 자개 위에서 반짝 빛나는 점
+    const k = glints[i], a = (t - k.t0) / k.life;
+    if (a >= 1) { glints.splice(i, 1); continue; }
+    const v = Math.sin(Math.PI * a), r = k.r * (.4 + .8 * v);
+    const gl = ctx.createRadialGradient(k.x, k.y, 0, k.x, k.y, r * 2.2);
+    gl.addColorStop(0, `rgba(255,252,246,${.55 * v})`); gl.addColorStop(1, 'rgba(255,252,246,0)');
+    ctx.fillStyle = gl; ctx.fillRect(k.x - r * 2.2, k.y - r * 2.2, r * 4.4, r * 4.4);
+    ctx.fillStyle = `rgba(255,253,248,${.8 * v})`;
+    ctx.beginPath();
+    ctx.moveTo(k.x, k.y - r * 2); ctx.lineTo(k.x + r * .18, k.y - r * .18); ctx.lineTo(k.x + r * 2, k.y);
+    ctx.lineTo(k.x + r * .18, k.y + r * .18); ctx.lineTo(k.x, k.y + r * 2); ctx.lineTo(k.x - r * .18, k.y + r * .18);
+    ctx.lineTo(k.x - r * 2, k.y); ctx.lineTo(k.x - r * .18, k.y - r * .18); ctx.closePath(); ctx.fill();
+  }
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const k = sparks[i];
+    k.life -= 1 / 50; if (k.life <= 0) { sparks.splice(i, 1); continue; }
+    k.x += k.vx / 60; k.y += k.vy / 60; k.vx *= .94; k.vy *= .94;
+    const r = k.r * (0.5 + k.life);
+    ctx.fillStyle = `hsla(${k.h},35%,90%,${k.life * .85})`;
+    ctx.beginPath();
+    ctx.moveTo(k.x, k.y - r * 2); ctx.lineTo(k.x + r * .4, k.y - r * .4); ctx.lineTo(k.x + r * 2, k.y);
+    ctx.lineTo(k.x + r * .4, k.y + r * .4); ctx.lineTo(k.x, k.y + r * 2); ctx.lineTo(k.x - r * .4, k.y + r * .4);
+    ctx.lineTo(k.x - r * 2, k.y); ctx.lineTo(k.x - r * .4, k.y - r * .4); ctx.closePath(); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  for (const p of pointers.values()) { p.px = p.x; p.py = p.y; }
+  for (const h of hands) { h.px = h.x; h.py = h.y; }
+}
+
+/* ---------- 단계 ---------- */
+const HINT = {
+  1: '윤곽선으로 둘러싼 칸이 자개 한 조각이 돼요 · 잎맥이나 꽃잎 결은 새김선으로 그려요',
+  fill: '칸 · 누른 채 움직이면 붙을 칸이 밝게 보이고, 손을 떼면 자개가 붙어요 · 같은 자개로 다시 누르면 떼어요',
+  line: '선 · 도안 선을 누르면 그 선 전체에 끊음질 자개가 입혀져요 · 선 가까이만 눌러도 돼요',
+  feather: '깃털 · 그은 방향으로 깃 조각이 엇갈려 붙어요. 날개와 꼬리에',
+  scale: '비늘 · 둥근 조각이 겹쳐 붙어요. 몸통 깃털, 물고기, 솔방울에',
+  needle: '솔잎 · 짧게 그으면 솔잎 뭉치가 피어나요',
+  strip: '끊음질 · 띠를 끊어 이어 붙여요. 줄기, 다리, 테두리에',
+  4: '완성! 손가락을 움직이거나 기기를 기울이면 보는 각도에 따라 자개빛이 바뀌어요 · 톡 누르면 빛 물결',
+};
+function goStep(n) {
+  if (n >= 2 && !doan.some(s => !s.erase)) { toast('먼저 도안을 그려 주세요.'); return; }
+  try {
+    if (n >= 2 && (!REG || step === 1)) { if (!REG) computeRegions(); compose(); }
+    if (n >= 3 && !inlayCount) { toast('칸을 눌러 자개를 하나 이상 붙여 주세요.'); n = 2; }
+    const from = step;
+    step = n;
+    if (n >= 2 && (from === 1 || !NB)) buildNacre();
+    if (n === 3) initCover(false);
+    if (n === 4 && from !== 3) { polish.done = true; polish.fade = 0; }
+  } catch (e) { reportError(e); }
+  if (step <= 2 && camOn) stopCamera();
+  closeFolds();
+  pick = null; touchAt = null; pickRid = -1;
+  live = null; down = null; liveStamp = null; drag1 = null; if (step !== 1) sel = null; pointers.clear(); sparks.length = 0;
+  $$('.steps button').forEach(b => b.dataset.step == step ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
+  for (let k = 1; k <= 4; k++) $('tray' + k).hidden = k !== step;
+  $('hint').textContent = step === 1 ? HINT[1] : step === 2 ? HINT[tool] : step === 4 ? HINT[4] : '';
+  if (step === 3) updateMeter();
+  cv.style.cursor = step <= 2 ? 'crosshair' : 'pointer';
+  setCamLabels(); updateButtons();
+  dirty = true;
+}
+function updateButtons() {
+  $('bUndo1').disabled = !hist1.length; $('bClear').disabled = !doan.length;
+  $('bDelSel').disabled = sel == null; $('bDup').disabled = sel == null;
+  $('bUndo2').disabled = !hist.length;
+}
+
+/* ---------- 휴대폰: 도구 묶음을 접어 한 줄로 ---------- */
+const PHONE = matchMedia('(max-width:620px)');
+function chipLabel() {
+  $$('.group[data-fold]').forEach(g => {
+    const on = g.dataset.nostate ? null : [...g.querySelectorAll('[aria-pressed="true"]')].find(b => !b.closest('#sizeGroup'));
+    g._chip.textContent = (on ? (on.textContent.trim() || on.getAttribute('aria-label')) : g.dataset.fold) + ' ▾';
+    g._chip.setAttribute('aria-label', g.dataset.fold + (on ? ': ' + (on.textContent.trim() || on.getAttribute('aria-label')) : ''));
+  });
+}
+function closeFolds() { $$('.group[data-fold].open').forEach(g => { g.classList.remove('open'); g._chip.setAttribute('aria-expanded', 'false'); }); }
+$$('.group[data-fold]').forEach(g => {
+  const chip = document.createElement('button');
+  chip.className = 'tbtn chip' + (g.dataset.always ? ' always' : ''); chip.type = 'button'; chip.setAttribute('aria-expanded', 'false');
+  g.before(chip); g._chip = chip;
+  chip.onclick = () => {
+    const open = !g.classList.contains('open'); closeFolds();
+    if (!open) return;
+    g.style.bottom = (innerHeight - g.closest('.tray').getBoundingClientRect().top + 8) + 'px';
+    g.style.left = Math.max(16, Math.min(chip.getBoundingClientRect().left, innerWidth - 640)) + 'px';
+    g.classList.add('open'); chip.setAttribute('aria-expanded', 'true');
+  };
+  g.addEventListener('click', e => { const b = e.target.closest('button'); if (b && (PHONE.matches || g.dataset.always) && !b.closest('#sizeGroup') && b.id !== 'bPhotoOff') setTimeout(closeFolds, 150); });
+});
+document.addEventListener('pointerdown', e => { if (!e.target.closest('.group.open, .chip')) closeFolds(); });
+new MutationObserver(chipLabel).observe(document.querySelector('.app'), { subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
+chipLabel();
+
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input, textarea')) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); const u = step === 1 ? $('bUndo1') : step === 2 ? $('bUndo2') : null; if (u && !u.disabled) u.click(); }
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && step === 1 && sel != null) { e.preventDefault(); $('bDelSel').click(); }
+  else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'd' || e.key.toLowerCase() === 'v') && step === 1 && sel != null) { e.preventDefault(); duplicateSel(); }
+  else if (e.key === 'Escape') { closeFolds(); if (sel != null) { sel = null; updateButtons(); dirty = true; } }
+});
+
+$$('.steps button').forEach(b => b.onclick = () => goStep(+b.dataset.step));
+$('go2').onclick = () => goStep(2);
+$('go3').onclick = () => goStep(3);
+function syncPen() {
+  $$('[data-kind]').forEach(x => x.setAttribute('aria-pressed', !erasing && x.dataset.kind === penKind));
+  $$('[data-pen]').forEach(x => x.setAttribute('aria-pressed', +x.dataset.pen === penSize));
+  $('bErase').setAttribute('aria-pressed', erasing);
+}
+$$('[data-kind]').forEach(b => b.onclick = () => { penKind = b.dataset.kind; erasing = false; syncPen(); if (tool1 !== 'draw') setTool1('draw'); });
+$$('[data-pen]').forEach(b => b.onclick = () => { penSize = +b.dataset.pen; erasing = false; syncPen(); });
+$('bErase').onclick = () => { erasing = !erasing; syncPen(); setTool1('draw'); };
+$$('[data-shape]').forEach(b => b.onclick = () => {
+  shape = b.dataset.shape; erasing = false; syncPen(); setTool1('draw');
+});
+$('bMirror').onclick = () => { mirror = !mirror; $('bMirror').setAttribute('aria-pressed', mirror); dirty = true; };
+$('bUndo1').onclick = () => {
+  if (!hist1.length) return;
+  const h = hist1.pop(); doan = h.doan; fills = h.fills; deco = h.deco; sel = null; drag1 = null;
+  renderDoan(); doanChanged(); dirty = true;
+};
+$('bClear').onclick = () => { snap1(); doan = []; fills = []; deco = []; hist = []; sel = null; renderDoan(); doanChanged(); };
+$('bDup').onclick = duplicateSel;
+$('zFit').onclick = () => { zoomView.z = 1; zoomView.x = 0; zoomView.y = 0; applyZoom(); };
+$('bPhoto').onclick = () => $('photoIn').click();
+$('photoIn').onchange = e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => { photo = img; $('bPhotoOff').hidden = false; dirty = true; toast('사진을 흐리게 깔았어요. 윤곽선으로 따라 그려 보세요. 사진은 완성 작품에 들어가지 않아요.', 5000); };
+  img.onerror = () => toast('이 파일은 열 수 없어요. 사진 파일(jpg, png)을 골라 주세요.');
+  img.src = URL.createObjectURL(f); e.target.value = '';
+};
+$('bPhotoOff').onclick = () => { photo = null; $('bPhotoOff').hidden = true; dirty = true; };
+$$('[data-lacq]').forEach(b => b.onclick = () => {
+  lacq = b.dataset.lacq;
+  $$('[data-lacq]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  try { buildLacquer(); if (NB) buildNacre(); } catch (er) { reportError(er); }
+  dirty = true;
+});
+$('stampText').addEventListener('input', () => { if (tool1 !== 'stamp' || stampKind !== 'text') { erasing = false; syncPen(); setTool1('stamp', 'text'); } });
+$('bSelect').onclick = () => setTool1(tool1 === 'select' ? 'draw' : 'select');
+$('bDelSel').onclick = () => { if (sel == null) return; snap1(); doan = doan.filter(s => s.g !== sel); sel = null; renderDoan(); doanChanged(); dirty = true; };
+$$('[data-stamp]').forEach(b => b.onclick = () => { erasing = false; syncPen(); setTool1('stamp', b.dataset.stamp); });
+$('bSample').onclick = () => { snap1(); sel = null; doan = sampleDoan(); fills = []; deco = []; hist = []; renderDoan(); doanChanged(); toast('달과 매화 가지 도안이에요. 고치거나 더 그려도 돼요.'); };
+$$('[data-type]').forEach(b => b.onclick = () => {
+  curType = +b.dataset.type; $('shellName').textContent = SHELL_NAME[curType];
+  $$('[data-type]').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+$$('[data-tool]').forEach(b => b.onclick = () => {
+  tool = b.dataset.tool; $('hint').textContent = HINT[tool];
+  $('sizeGroup').hidden = tool === 'fill' || tool === 'line';
+  $$('[data-tool]').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+$$('[data-size]').forEach(b => b.onclick = () => {
+  decoSize = +b.dataset.size;
+  $$('[data-size]').forEach(x => x.setAttribute('aria-pressed', x === b));
+});
+$('bAuto').onclick = autoFill;
+$('bUndo2').onclick = () => {
+  const h = hist.pop(); if (!h) return;
+  fills = h.fills; doan.forEach((s, i) => s.inlay = h.inl[i] ?? null); deco.length = h.deco;
+  compose(); updateButtons();
+};
+$('bPolishAll').onclick = finishPolish;
+$$('.bCam').forEach(b => b.onclick = startCamera);
+$$('.bTilt').forEach(b => b.onclick = enableTilt);
+$('bNew').onclick = () => { doan = []; fills = []; deco = []; hist = []; renderDoan(); doanChanged(); goStep(1); toast('새 옻칠 판이에요. 도안부터 그려 보세요.'); };
+$('bAbout').onclick = () => toast('나전칠기는 전복·조개 껍데기를 얇게 갈아 무늬대로 오려 붙이고, 옻칠을 여러 번 덮은 뒤 갈아내 자개를 드러내는 우리 전통 공예예요. 모양대로 오려 붙이는 주름질, 가는 띠를 끊어 붙이는 끊음질이 대표 기법이에요.', 8000);
+const dlP = window.claude?.use ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+$('bSave').onclick = () => {
+  cv.toBlob(async b => {
+    if (!b) return;
+    const name = (($('workName').value || '').trim() || '나만의 나전칠기') + '.png';
+    const dl = await dlP;
+    if (dl) { try { await dl.save({ filename: name, data: b }); } catch {} return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+};
+
+applyZoom();
+if (document.fonts && document.fonts.load) document.fonts.load('900 40px "Noto Sans KR"', '복').then(() => glyphCache.clear()).catch(() => {});
+{ let ht = 0; const h = $('hint'); const show = () => { h.classList.remove('dim'); clearTimeout(ht); ht = setTimeout(() => h.classList.add('dim'), 6000); };
+  new MutationObserver(show).observe(h, { childList: true, characterData: true, subtree: true }); show(); }
+doan = sampleDoan();
+resize();
+goStep(1);
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
